@@ -1,0 +1,8 @@
+archive/
+demo/
+env_config.py
+RyotaroOkabe
+chem_eq/
+
+__pycache__/
+wandb/
