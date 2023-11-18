@@ -10,7 +10,7 @@ from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM, TrainingArguments, Trainer
 from transformers import DataCollatorForLanguageModeling
 seedn=42
-random.seed(seedn)
+# random.seed(seedn)
 from utils.data import *
 device = 'cuda'
 file_name = os.path.basename(__file__)
@@ -32,8 +32,8 @@ overwrite_output_dir=True
 nepochs = 10
 lr=2e-5
 wdecay=0.01
-per_device_train_batch_size = 1  # default: 8
-per_device_eval_batch_size = 1  # default: 8
+per_device_train_batch_size = 8  # default: 8
+per_device_eval_batch_size = 8  # default: 8
 
 print('epochs: ', nepochs)
 print('learning rate: ', lr)
@@ -43,15 +43,20 @@ print('per_device_eval_batch_size: ', per_device_eval_batch_size)
 
 #%%
 # load data
-data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.json'
+random.seed(seedn)
+sample_ratio = 1
+data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.json'  # path to the saved data (json)
 data = json.load(open(data_path, 'r'))
-num_sample = int(len(data)*1)
-separator=' || '
-dataset = dataset_ceq2ope_2(random.sample(data, num_sample), index=None, te_ratio=0.1, separator=separator) # [dataset_ope2ceq, dataset_ceq2ope, dataset_ope2ceq_2, dataset_ceq2ope_2]
+num_sample = int(len(data)*sample_ratio)
+separator=' == '
+rand_indices = random.sample(range(len(data)), num_sample)
+data1 = [data[i] for i in rand_indices]
+dataset = dataset_lhs2rhs(data1, index=None, te_ratio=0.1, separator=separator) # [dataset_ope2ceq, dataset_ceq2ope, dataset_ope2ceq_2, dataset_ceq2ope_2]
 hf_model = "gpt2" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
-model_name = hf_usn + '/ope_gpt2_v1.2'# '/syn_distilgpt2_v2'
+model_name = hf_usn + '/ceq_lr_gpt2_v1.1'# '/syn_distilgpt2_v2'
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
+save_indices = True
 
 print('num data: ', num_sample)
 print('hf_model: ', hf_model)
@@ -101,17 +106,18 @@ model0 = AutoModelForCausalLM.from_pretrained(hf_model).to(device)
 
 #%% 
 # Inference using model before trainign before training 
-idx = 81
+idx = 80
 data_source = 'test'
-out_type='add'
-out_size = 80
+out_type='mul'
+out_size = 2.2
+remove_header=False
 print(idx)
 print('<<our prediction (before training)>>')
 output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
-                     separator=separator, remove_header=True, source=data_source, device=device)
+                     separator=separator, remove_header=remove_header, source=data_source, device=device)
 print('<<Without training>>')
 output0=show_one_test(model0, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
-                      separator=separator, remove_header=True, source=data_source, device=device)
+                      separator=separator, remove_header=remove_header, source=data_source, device=device)
 
 
 #%%
@@ -145,17 +151,23 @@ trainer.train()
 model.push_to_hub(model_name)
 eval_results = trainer.evaluate()
 print(f"Perplexity: {math.exp(eval_results['eval_loss']):.2f}")
+if save_indices:
+    with open(f'./models/{model_name}/idx_s{sample_ratio}_seed{seedn}.txt', 'w') as f: 
+        for i in rand_indices: f.write(f"{i}\n")
 
 #%%
 print('test after training')
-idx = 81
+idx = 9
 data_source = 'test'
-out_type='add'
-out_size = 80
+out_type='mul'
+out_size = 2.2
+remove_header=False
 print(idx)
-print('<<our prediction (after training training)>>')
+print('<<our prediction (before training)>>')
 output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
-                     separator=separator, remove_header=True, source=data_source, device=device)
+                     separator=separator, remove_header=remove_header, source=data_source, device=device)
 print('<<Without training>>')
 output0=show_one_test(model0, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
-                      separator=separator, remove_header=True, source=data_source, device=device)
+                      separator=separator, remove_header=remove_header, source=data_source, device=device)
+
+# %%

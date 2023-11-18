@@ -36,7 +36,7 @@ def process_dataset(data, index=None, te_ratio=0.1, separator=' || '):
     return dataset_dict
     
 
-def dataset_lhs2rhs(data, index=None, te_ratio=0.1):
+def dataset_lhs2rhs(data, index=None, te_ratio=0.1, separator=' == '):
     num = len(data)
     te_num = int(num*te_ratio)
     tr_num = num - te_num
@@ -46,12 +46,54 @@ def dataset_lhs2rhs(data, index=None, te_ratio=0.1):
         {"label": data[i]['targets_string'][0] , "text": data[i]['reaction_string']} for i in index
         # Add more dictionaries here...
     ]
+    if separator is None:
+        separator=''
+    else:
+        separator=str(separator)
     # Convert the list of dictionaries to a dictionary of lists
     data_dict = {"label": [], "text": []}
     for data_point in data_list:
         a = data_point["text"]
-        data_dict["label"].append(a.split('==')[0] + '==')
-        data_dict["text"].append(a)
+        lhs, rhs = a.split('==')
+        data_dict["label"].append(lhs+separator)
+        data_dict["text"].append(lhs+separator+rhs)
+
+    # Create a Dataset
+    custom_dataset = Dataset.from_dict(data_dict)
+
+    # Split the dataset into train and test
+    train_dataset = custom_dataset.select(list(range(tr_num)))
+    test_dataset = custom_dataset.select(list(range(tr_num, num)))
+
+    # Create a DatasetDict with the desired format
+    dataset_dict = DatasetDict({
+        "train": train_dataset,
+        "test": test_dataset,
+    })
+
+    return dataset_dict
+
+def dataset_rhs2lhs(data, index=None, te_ratio=0.1, separator=' || '):
+    num = len(data)
+    te_num = int(num*te_ratio)
+    tr_num = num - te_num
+    if index is None: 
+        index = list(range(num))
+    data_list = [
+        {"label": data[i]['targets_string'][0] , "text": data[i]['reaction_string']} for i in index
+        # Add more dictionaries here...
+    ]
+    if separator is None:
+        separator=''
+    else:
+        separator=str(separator)
+    # Convert the list of dictionaries to a dictionary of lists
+    data_dict = {"label": [], "text": []}
+    for data_point in data_list:
+        a = data_point["text"]
+        lhs, rhs = a.split('==')
+        data_dict["label"].append(rhs)
+        data_dict["text"].append(rhs+separator+lhs)
 
     # Create a Dataset
     custom_dataset = Dataset.from_dict(data_dict)
