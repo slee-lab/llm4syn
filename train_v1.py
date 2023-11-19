@@ -56,6 +56,7 @@ data1 = [data[i] for i in rand_indices]
 dataset = dataset_ceq2ope_3(data1, index=None, te_ratio=0.1, separator=separator) # [dataset_ope2ceq, dataset_ceq2ope, dataset_ope2ceq_2, dataset_ceq2ope_2]
 hf_model = "gpt2" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
 model_name = hf_usn + '/ope_gpt2_v3.2'# '/syn_distilgpt2_v2'
+tk_model = hf_model # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
 save_indices = True
@@ -65,7 +66,7 @@ print('hf_model: ', hf_model)
 print('model_name:', model_name)
 #%%
 # load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(hf_model) 
+tokenizer = AutoTokenizer.from_pretrained(tk_model) 
 if pad_tokenizer:
     tokenizer.pad_token = tokenizer.eos_token   #!
     # tokenizer.add_special_tokens({'pad_token': '[PAD]'})  # checkk if we need this line. 
