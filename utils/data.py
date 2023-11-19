@@ -36,7 +36,7 @@ def process_dataset(data, index=None, te_ratio=0.1, separator=' || '):
     return dataset_dict
     
 
-def dataset_lhs2rhs(data, index=None, te_ratio=0.1, separator=' == '):
+def dataset_lhs2rhs(data, index=None, te_ratio=0.1, separator=' == ', eqsplit='=='):
     num = len(data)
     te_num = int(num*te_ratio)
     tr_num = num - te_num
@@ -54,7 +54,7 @@ def dataset_lhs2rhs(data, index=None, te_ratio=0.1, separator=' == '):
     data_dict = {"label": [], "text": []}
     for data_point in data_list:
         a = data_point["text"]
-        lhs, rhs = a.split('==')
+        lhs, rhs = a.split(eqsplit)
         data_dict["label"].append(lhs+separator)
         data_dict["text"].append(lhs+separator+rhs)
 
@@ -73,7 +73,7 @@ def dataset_lhs2rhs(data, index=None, te_ratio=0.1, separator=' == '):
 
     return dataset_dict
 
-def dataset_rhs2lhs(data, index=None, te_ratio=0.1, separator=' || '):
+def dataset_rhs2lhs(data, index=None, te_ratio=0.1, separator=' || ', eqsplit='=='):
     num = len(data)
     te_num = int(num*te_ratio)
     tr_num = num - te_num
@@ -91,7 +91,7 @@ def dataset_rhs2lhs(data, index=None, te_ratio=0.1, separator=' || '):
     data_dict = {"label": [], "text": []}
     for data_point in data_list:
         a = data_point["text"]
-        lhs, rhs = a.split('==')
+        lhs, rhs = a.split(eqsplit)
         data_dict["label"].append(rhs)
         data_dict["text"].append(rhs+separator+lhs)
 
@@ -118,7 +118,12 @@ def dataset_ope2ceq(data, index=None, te_ratio=0.1, separator=' || '):
     if index is None: 
         index = list(range(num))
     data_list = [
-        {"target": ", ".join(data[i]['targets_string']) , "opes": data[i]['operations'], 'eq': data[i]['reaction_string']} for i in index
+        {
+            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
+            "opes": data[i]['operations'],
+            'eq': data[i]['reaction_string']
+        }
+        for i in index
         # Add more dictionaries here...
     ]
     if separator is None:
@@ -154,7 +159,12 @@ def dataset_ceq2ope(data, index=None, te_ratio=0.1, separator=' || '):
     if index is None: 
         index = list(range(num))
     data_list = [
-        {"target": ", ".join(data[i]['targets_string']) , "opes": data[i]['operations'], 'eq': data[i]['reaction_string']} for i in index
+        {
+            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
+            "opes": data[i]['operations'],
+            'eq': data[i]['reaction_string']
+        }
+        for i in index
         # Add more dictionaries here...
     ]
     if separator is None:
@@ -192,7 +202,12 @@ def dataset_ope2ceq_2(data, index=None, te_ratio=0.1, separator=' || '):
     if index is None: 
         index = list(range(num))
     data_list = [
-        {"target": ", ".join(data[i]['targets_string']) , "opes": data[i]['operations'], 'eq': data[i]['reaction_string']} for i in index
+        {
+            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
+            "opes": data[i]['operations'],
+            'eq': data[i]['reaction_string']
+        }
+        for i in index
         # Add more dictionaries here...
     ]
     if separator is None:
@@ -239,7 +254,12 @@ def dataset_ceq2ope_2(data, index=None, te_ratio=0.1, separator=' || '):
     if index is None: 
         index = list(range(num))
     data_list = [
-        {"target": ", ".join(data[i]['targets_string']) , "opes": data[i]['operations'], 'eq': data[i]['reaction_string']} for i in index
+        {
+            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
+            "opes": data[i]['operations'],
+            'eq': data[i]['reaction_string']
+        }
+        for i in index
         # Add more dictionaries here...
     ]
     if separator is None:
@@ -277,6 +297,123 @@ def dataset_ceq2ope_2(data, index=None, te_ratio=0.1, separator=' || '):
     })
 
     return dataset_dict
+
+
+def dataset_ope2ceq_3(data, index=None, te_ratio=0.1, separator=' || '):
+    num = len(data)
+    te_num = int(num*te_ratio)
+    tr_num = num - te_num
+    if index is None: 
+        index = list(range(num))
+    # print('index: ', index)
+    data_list = [
+        {
+            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
+            "opes": data[i]['operations'],
+            'eq': data[i]['reaction_string']
+        }
+        for i in index
+        # Add more dictionaries here...
+    ]
+    # print('data_list: ', data_list)
+    if separator is None:
+        separator=''
+    else:
+        separator=str(separator)
+    # Convert the list of dictionaries to a dictionary of lists
+    data_dict = {"label": [], "text": []}
+    for h, d in enumerate(data_list):
+        operations = {}
+        for i, d_ in enumerate(d['opes']):
+            ope = d_['type']
+            if d_['conditions'] is None:
+                op = None
+                # print([h, i], ope, op)
+            else:
+                op = {}
+                for k, a in d_['conditions'].items():
+                    if a is not None:
+                        if len(a) > 0:
+                            op[k] = a
+            operations[ope]=op
+            # print([h, i], ope, op)
+        prompt = d['target'] + ': ' + str(operations)
+        data_dict["label"].append(prompt)
+        data_dict["text"].append(prompt+ separator + d['eq'])
+
+    # Create a Dataset
+    custom_dataset = Dataset.from_dict(data_dict)
+
+    # Split the dataset into train and test
+    train_dataset = custom_dataset.select(list(range(tr_num)))
+    test_dataset = custom_dataset.select(list(range(tr_num, num)))
+
+    # Create a DatasetDict with the desired format
+    dataset_dict = DatasetDict({
+        "train": train_dataset,
+        "test": test_dataset,
+    })
+
+    return dataset_dict
+
+
+def dataset_ceq2ope_3(data, index=None, te_ratio=0.1, separator=' || '):
+    num = len(data)
+    te_num = int(num*te_ratio)
+    tr_num = num - te_num
+    if index is None: 
+        index = list(range(num))
+    data_list = [
+        {
+            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
+            "opes": data[i]['operations'],
+            'eq': data[i]['reaction_string']
+        }
+        for i in index
+        # Add more dictionaries here...
+    ]
+    if separator is None:
+        separator=''
+    else:
+        separator=str(separator)
+    # Convert the list of dictionaries to a dictionary of lists
+    data_dict = {"label": [], "text": []}
+    for h, d in enumerate(data_list):
+        operations = {}
+        for i, d_ in enumerate(d['opes']):
+            ope = d_['type']
+            # print(ope, d_['conditions'])
+            if d_['conditions'] is None:
+                op = None
+                # print([h, i], ope, op)
+            else:
+                op = {}
+                for k, a in d_['conditions'].items():
+                    if a is not None:
+                        if len(a) > 0:
+                            op[k] = a
+            operations[ope]=op
+            # print([h, i], ope, op)
+        prompt = d['eq']
+        data_dict["label"].append(prompt)
+        data_dict["text"].append(prompt+ separator +str(operations))
+
+    # Create a Dataset
+    custom_dataset = Dataset.from_dict(data_dict)
+
+    # Split the dataset into train and test
+    train_dataset = custom_dataset.select(list(range(tr_num)))
+    test_dataset = custom_dataset.select(list(range(tr_num, num)))
+
+    # Create a DatasetDict with the desired format
+    dataset_dict = DatasetDict({
+        "train": train_dataset,
+        "test": test_dataset,
+    })
+
+    return dataset_dict
+
+
 
 def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'value': 50}, separator=None, remove_header=True, source='test',device='cuda'):
     """_summary_

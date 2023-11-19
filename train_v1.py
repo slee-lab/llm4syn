@@ -29,7 +29,7 @@ run_name="cava"
 
 # hparamm for training
 overwrite_output_dir=True
-nepochs = 10
+nepochs = 50
 lr=2e-5
 wdecay=0.01
 per_device_train_batch_size = 8  # default: 8
@@ -43,17 +43,19 @@ print('per_device_eval_batch_size: ', per_device_eval_batch_size)
 
 #%%
 # load data
+
 random.seed(seedn)
 sample_ratio = 1
-data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.json'  # path to the saved data (json)
+data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.json'  # path to the inorganic crystal synthesis data (json)
+# data_path = '/home/rokabe/data2/cava/data/solutionsynthesis_dataset_202185.json'    # path to the solution based synthesis data (json)
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
-separator=' == '
+separator=' || '
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = dataset_lhs2rhs(data1, index=None, te_ratio=0.1, separator=separator) # [dataset_ope2ceq, dataset_ceq2ope, dataset_ope2ceq_2, dataset_ceq2ope_2]
+dataset = dataset_ceq2ope_3(data1, index=None, te_ratio=0.1, separator=separator) # [dataset_ope2ceq, dataset_ceq2ope, dataset_ope2ceq_2, dataset_ceq2ope_2]
 hf_model = "gpt2" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
-model_name = hf_usn + '/ceq_lr_gpt2_v1.1'# '/syn_distilgpt2_v2'
+model_name = hf_usn + '/ope_gpt2_v3.2'# '/syn_distilgpt2_v2'
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
 save_indices = True
@@ -106,11 +108,11 @@ model0 = AutoModelForCausalLM.from_pretrained(hf_model).to(device)
 
 #%% 
 # Inference using model before trainign before training 
-idx = 80
+idx = 81
 data_source = 'test'
-out_type='mul'
-out_size = 2.2
-remove_header=False
+out_type='add'
+out_size = 50
+remove_header=True
 print(idx)
 print('<<our prediction (before training)>>')
 output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
@@ -159,9 +161,6 @@ if save_indices:
 print('test after training')
 idx = 9
 data_source = 'test'
-out_type='mul'
-out_size = 2.2
-remove_header=False
 print(idx)
 print('<<our prediction (before training)>>')
 output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
