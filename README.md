@@ -24,9 +24,9 @@ MMake accoutn and login
 
 ## (3) Setup envs
 '''
-torch==2.0.0+cu118__
-transformers==4.33.2__
-other basic libraries like numpy, matplotlib etc. __
+torch==2.0.0+cu118  
+transformers==4.33.2  
+other basic libraries like numpy, matplotlib etc.  
 '''
 
 ## (4) Use train code
