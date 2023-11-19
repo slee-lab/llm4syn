@@ -7,8 +7,8 @@ Synthesis recipe generation
 
 ## (1) download dataset
 download dataset from the two sources below. Place the .json files in ./data/  
-https://www.nature.com/articles/s41597-019-0224-1#citeas  
-https://www.nature.com/articles/s41597-022-01317-2  
+[1] https://www.nature.com/articles/s41597-019-0224-1#citeas  
+[2] https://www.nature.com/articles/s41597-022-01317-2  
 
 
 ## (2) Set up personal accounts for Hugging Face and WandB
@@ -55,8 +55,14 @@ e.g. "gpt2", "distilgpt2", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-j-6B"
 ## (5) Current available models 
 model_name | hf_model | dataset | data source | Ratio of used data | memo
 --- | --- | --- | --- |--- |--- 
-ceq_dgpt2_v1.1 | distilgpt | dataset_ope2ceq_2 | [1] | 0.1 | XX
-ope_dgpt2_v1.1 | distilgpt | dataset_ceq2ope_2 | [1] | 0.1 | XX
+RyotaroOKabe/ceq_dgpt2_v1.1 | distilgpt2 | dataset_ope2ceq_2 | [1] | 0.1 | XX
+RyotaroOKabe/ope_dgpt2_v1.1 | distilgpt2 | dataset_ceq2ope_2 | [1] | 0.1 | XX
+RyotaroOKabe/ceq_lr_gpt2_v1.1 | gpt2 | dataset_lhs2rhs | [1] | 1 | XX
+RyotaroOKabe/ceq_rl_gpt2_v1.1 | gpt2 | dataset_rhs2lhs | [1] | 1 | XX
+RyotaroOKabe/ceq_gpt2_v1.2 | gpt2 | dataset_ope2ceq_2 | [1] | 1 | XX
+RyotaroOKabe/ope_gpt2_v1.5 | gpt2 | dataset_ceq2ope_2 | [1] | 1 | XX
+RyotaroOKabe/ceq_lr_gpt2_B_v1.1 | gpt2 | dataset_lhs2rhs | [2] | 1 | XX
+RyotaroOKabe/ceq_rl_gpt2_B_v1.1 | gpt2 | dataset_rhs2lhs | [2] | 1 | XX
 
 
 
