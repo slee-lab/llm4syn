@@ -42,7 +42,7 @@ data_path: path to the .json data file.
     - **dataset_ope2ceq_3**: predict chemical equation given target compounds and synthesis operaations. ver3  
     - **dataset_ceq2ope_3**: predict synthesis operaations given chemical equation. ver3  
 
-## (4-2) Define model to load  
+### (4-2) Define model to load  
     - **hf_model**: the open-access model loaded from Hugging Face. We initialize model from this one.  
 e.g. "gpt2", "distilgpt2", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-j-6B"   
     - **model_name**: where to save the trainedmodel in your Hugging Face account. If load_pretrained==True, we load from our own pre-trained model and update by further training.   
@@ -50,6 +50,14 @@ e.g. "gpt2", "distilgpt2", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-j-6B"
 
 ### (4-3) Others
     - **separator**: Predicted text format (prompt separator answer)  
+
+
+## (5) Current available models 
+model_name | hf_model | dataset | data source | Ratio of used data | memo
+--- | --- | --- | --- |--- |--- 
+ceq_dgpt2_v1.1 | distilgpt | dataset_ope2ceq_2 | [1] | 0.1 | XX
+ope_dgpt2_v1.1 | distilgpt | dataset_ceq2ope_2 | [1] | 0.1 | XX
+
 
 
 ## Reference
