@@ -2,8 +2,8 @@
 Synthesis recipe generation
 
 ## (0) Create folders
-./data/
-./models/
+./data/  
+./models/  
 
 ## (1) download dataset
 download dataset from the two sources below. Place the .json files in ./data/  
@@ -68,6 +68,7 @@ RyotaroOKabe/ceq_rl_gpt2_B_v1.1 | gpt2 | dataset_rhs2lhs | [2] | 1 | XX
 
 ## Reference
 ```
+[1]  
 @article{kononova2019text,
   title={Text-mined dataset of inorganic materials synthesis recipes},
   author={Kononova, Olga and Huo, Haoyan and He, Tanjin and Rong, Ziqin and Botari, Tiago and Sun, Wenhao and Tshitoyan, Vahe and Ceder, Gerbrand},
@@ -79,6 +80,7 @@ RyotaroOKabe/ceq_rl_gpt2_B_v1.1 | gpt2 | dataset_rhs2lhs | [2] | 1 | XX
   publisher={Nature Publishing Group UK London}
 }
 
+[2]  
 @article{wang2022dataset,
   title={Dataset of solution-based inorganic materials synthesis procedures extracted from the scientific literature},
   author={Wang, Zheren and Kononova, Olga and Cruse, Kevin and He, Tanjin and Huo, Haoyan and Fei, Yuxing and Zeng, Yan and Sun, Yingzhi and Cai, Zijian and Sun, Wenhao and others},
