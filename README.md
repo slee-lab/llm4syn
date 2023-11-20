@@ -7,7 +7,7 @@ Synthesis recipe generation
 
 ## (1) download dataset
 download dataset from the two sources below. Place the .json files in ./data/  
-[1] https://www.nature.com/articles/s41597-019-0224-1#citeas  
+[1] https://www.nature.com/articles/s41597-019-0224-1  
 [2] https://www.nature.com/articles/s41597-022-01317-2  
 
 
@@ -24,8 +24,10 @@ MMake accoutn and login
 
 ## (3) Setup envs
 ```
+Python==3.10.0
 torch==2.0.0+cu118  
 transformers==4.33.2  
+wandb==0.16.0
 other basic libraries like numpy, matplotlib etc.  
 ```
 
@@ -33,23 +35,25 @@ other basic libraries like numpy, matplotlib etc.
 ### (4-1) set dataset 
 data_path: path to the .json data file.   
 **dataset function**: decide the prompt and output text. Check the input parameters for each   
-    - **dataset_lhs2rhs**: Predict RHS of a chemical equation given LHS  
-    - **dataset_rhs2lhs**: Predict LHS of a chemical equation given RHS  
-    - **dataset_ope2ceq**: predict chemical equation given target compounds and synthesis operaations. ver1  
-    - **dataset_ceq2ope**: predict synthesis operaations given chemical equation. ver1  
-    - **dataset_ope2ceq_2**: predict chemical equation given target compounds and synthesis operaations. ver2  
-    - **dataset_ceq2ope_2**: predict synthesis operaations given chemical equation. ver2  
-    - **dataset_ope2ceq_3**: predict chemical equation given target compounds and synthesis operaations. ver3  
-    - **dataset_ceq2ope_3**: predict synthesis operaations given chemical equation. ver3  
+    - **Dataset_Lhs2Rhs**: Predict RHS of a chemical equation given LHS  
+    - **Dataset_Rhs2Lhs**: Predict LHS of a chemical equation given RHS  
+    - **Dataset_Ope2Ceq**: predict chemical equation given target compounds and synthesis operaations. ver1  
+    - **Dataset_Ceq2Ope**: predict synthesis operations given chemical equation. ver1  
+    - **Dataset_Ope2Ceq_2**: predict chemical equation given target compounds and synthesis operaations. ver2  
+    - **Dataset_Ceq2Ope_2**: predict synthesis operations given chemical equation. ver2  
+    - **Dataset_Ope2Ceq_3**: predict chemical equation given target compounds and synthesis operaations. ver3  
+    - **Dataset_Ceq2Ope_3**: predict synthesis operations given chemical equation. ver3  
+    - **Dataset_Tgt2Ceq**: Predict chemical equation given target compounds
 
 ### (4-2) Define model to load  
-    - **hf_model**: the open-access model loaded from Hugging Face. We initialize model from this one.  
+
+- **hf_model**: the open-access model loaded from Hugging Face. We initialize model from this one.  
 e.g. "gpt2", "distilgpt2", "EleutherAI/gpt-neo-1.3B", "EleutherAI/gpt-j-6B"   
-    - **model_name**: where to save the trainedmodel in your Hugging Face account. If load_pretrained==True, we load from our own pre-trained model and update by further training.   
+- **model_name**: where to save the trainedmodel in your Hugging Face account. If load_pretrained==True, we load from our own pre-trained model and update by further training.   
 
 
 ### (4-3) Others
-    - **separator**: Predicted text format (prompt separator answer)  
+- **separator**: Predicted text format (prompt separator answer)  
 
 
 ## (5) Current available models 

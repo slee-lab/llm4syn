@@ -3,415 +3,300 @@ import torch
 from datasets import DatasetDict, Dataset
 
 
-def process_dataset(data, index=None, te_ratio=0.1, separator=' || '):
-    num = len(data)
-    te_num = int(num*te_ratio)
-    tr_num = num - te_num
-    if index is None: 
-        index = list(range(num))
-    data_list = [
-        {"label": data[i]['targets_string'][0] , "text": data[i]['reaction_string']} for i in index
-        # Add more dictionaries here...
-    ]
-    # Convert the list of dictionaries to a dictionary of lists
-    data_dict = {"label": [], "text": []}
-    for data_point in data_list:
-        data_dict["label"].append(data_point["label"])
-        # data_dict["text"].append(data_point["text"])
-        data_dict["text"].append(data_point["label"] + separator + data_point["text"])
-
-    # Create a Dataset
-    custom_dataset = Dataset.from_dict(data_dict)
-
-    # Split the dataset into train and test
-    train_dataset = custom_dataset.select(list(range(tr_num)))
-    test_dataset = custom_dataset.select(list(range(tr_num, num)))
-
-    # Create a DatasetDict with the desired format
-    dataset_dict = DatasetDict({
-        "train": train_dataset,
-        "test": test_dataset,
-    })
-
-    return dataset_dict
+class LLMDataset:
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
+        self.data = data
+        self.num = len(self.data)
+        self.te_ratio = te_ratio
+        self.te_num = int(self.num*self.te_ratio)
+        self.tr_num = self.num - self.te_num
+        if index is None: 
+            self.index = list(range(self.num))
+        else: 
+            self.index = index
+        if separator is None:
+            self.separator=''
+        else:
+            self.separator=str(separator)
+        self.get_data_list()
+        self.get_data_dict()
+        self.get_dataset()
     
+    def get_data_list(self):
+        pass
 
-def dataset_lhs2rhs(data, index=None, te_ratio=0.1, separator=' == ', eqsplit='=='):
-    num = len(data)
-    te_num = int(num*te_ratio)
-    tr_num = num - te_num
-    if index is None: 
-        index = list(range(num))
-    data_list = [
-        {"label": data[i]['targets_string'][0] , "text": data[i]['reaction_string']} for i in index
-        # Add more dictionaries here...
-    ]
-    if separator is None:
-        separator=''
-    else:
-        separator=str(separator)
-    # Convert the list of dictionaries to a dictionary of lists
-    data_dict = {"label": [], "text": []}
-    for data_point in data_list:
-        a = data_point["text"]
-        lhs, rhs = a.split(eqsplit)
-        data_dict["label"].append(lhs+separator)
-        data_dict["text"].append(lhs+separator+rhs)
+    def get_data_dict(self):
+        pass
 
-    # Create a Dataset
-    custom_dataset = Dataset.from_dict(data_dict)
+    def get_dataset(self):
+        custom_dataset = Dataset.from_dict(self.data_dict)
 
-    # Split the dataset into train and test
-    train_dataset = custom_dataset.select(list(range(tr_num)))
-    test_dataset = custom_dataset.select(list(range(tr_num, num)))
+        # Split the dataset into train and test
+        train_dataset = custom_dataset.select(list(range(self.tr_num)))
+        test_dataset = custom_dataset.select(list(range(self.tr_num, self.num)))
 
-    # Create a DatasetDict with the desired format
-    dataset_dict = DatasetDict({
-        "train": train_dataset,
-        "test": test_dataset,
-    })
-
-    return dataset_dict
-
-def dataset_rhs2lhs(data, index=None, te_ratio=0.1, separator=' || ', eqsplit='=='):
-    num = len(data)
-    te_num = int(num*te_ratio)
-    tr_num = num - te_num
-    if index is None: 
-        index = list(range(num))
-    data_list = [
-        {"label": data[i]['targets_string'][0] , "text": data[i]['reaction_string']} for i in index
-        # Add more dictionaries here...
-    ]
-    if separator is None:
-        separator=''
-    else:
-        separator=str(separator)
-    # Convert the list of dictionaries to a dictionary of lists
-    data_dict = {"label": [], "text": []}
-    for data_point in data_list:
-        a = data_point["text"]
-        lhs, rhs = a.split(eqsplit)
-        data_dict["label"].append(rhs)
-        data_dict["text"].append(rhs+separator+lhs)
-
-    # Create a Dataset
-    custom_dataset = Dataset.from_dict(data_dict)
-
-    # Split the dataset into train and test
-    train_dataset = custom_dataset.select(list(range(tr_num)))
-    test_dataset = custom_dataset.select(list(range(tr_num, num)))
-
-    # Create a DatasetDict with the desired format
-    dataset_dict = DatasetDict({
-        "train": train_dataset,
-        "test": test_dataset,
-    })
-
-    return dataset_dict
+        # Create a DatasetDict with the desired format
+        self.dataset = DatasetDict({
+            "train": train_dataset,
+            "test": test_dataset,
+        })
 
 
-def dataset_ope2ceq(data, index=None, te_ratio=0.1, separator=' || '):
-    num = len(data)
-    te_num = int(num*te_ratio)
-    tr_num = num - te_num
-    if index is None: 
-        index = list(range(num))
-    data_list = [
-        {
-            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
-            "opes": data[i]['operations'],
-            'eq': data[i]['reaction_string']
-        }
-        for i in index
-        # Add more dictionaries here...
-    ]
-    if separator is None:
-        separator=''
-    else:
-        separator=str(separator)
-    # Convert the list of dictionaries to a dictionary of lists
-    data_dict = {"label": [], "text": []}
-    for d in data_list:
-        prompt = d['target'] + ': ' + str(d['opes'])
-        data_dict["label"].append(prompt)
-        data_dict["text"].append(prompt+ separator + d['eq'])
+class Dataset_template(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
+        super().__init__(data, index, te_ratio, separator)
 
-    # Create a Dataset
-    custom_dataset = Dataset.from_dict(data_dict)
-
-    # Split the dataset into train and test
-    train_dataset = custom_dataset.select(list(range(tr_num)))
-    test_dataset = custom_dataset.select(list(range(tr_num, num)))
-
-    # Create a DatasetDict with the desired format
-    dataset_dict = DatasetDict({
-        "train": train_dataset,
-        "test": test_dataset,
-    })
-
-    return dataset_dict
-
-def dataset_ceq2ope(data, index=None, te_ratio=0.1, separator=' || '):
-    num = len(data)
-    te_num = int(num*te_ratio)
-    tr_num = num - te_num
-    if index is None: 
-        index = list(range(num))
-    data_list = [
-        {
-            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
-            "opes": data[i]['operations'],
-            'eq': data[i]['reaction_string']
-        }
-        for i in index
-        # Add more dictionaries here...
-    ]
-    if separator is None:
-        separator=''
-    else:
-        separator=str(separator)
-    # Convert the list of dictionaries to a dictionary of lists
-    data_dict = {"label": [], "text": []}
-    for d in data_list:
-        prompt = d['eq']
-        protocol = [d_['type'] for d_ in d['opes']] 
-        data_dict["label"].append(prompt)
-        data_dict["text"].append(prompt+ separator +" ".join(protocol))
-
-    # Create a Dataset
-    custom_dataset = Dataset.from_dict(data_dict)
-
-    # Split the dataset into train and test
-    train_dataset = custom_dataset.select(list(range(tr_num)))
-    test_dataset = custom_dataset.select(list(range(tr_num, num)))
-
-    # Create a DatasetDict with the desired format
-    dataset_dict = DatasetDict({
-        "train": train_dataset,
-        "test": test_dataset,
-    })
-
-    return dataset_dict
+    def get_data_list(self):
+        self.data_list = [
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
 
 
-def dataset_ope2ceq_2(data, index=None, te_ratio=0.1, separator=' || '):
-    num = len(data)
-    te_num = int(num*te_ratio)
-    tr_num = num - te_num
-    if index is None: 
-        index = list(range(num))
-    data_list = [
-        {
-            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
-            "opes": data[i]['operations'],
-            'eq': data[i]['reaction_string']
-        }
-        for i in index
-        # Add more dictionaries here...
-    ]
-    if separator is None:
-        separator=''
-    else:
-        separator=str(separator)
-    # Convert the list of dictionaries to a dictionary of lists
-    data_dict = {"label": [], "text": []}
-    for h, d in enumerate(data_list):
-        operations = {}
-        for i, d_ in enumerate(d['opes']):
-            ope = d_['type']
-            if d_['conditions'] is None:
-                op = None
+class Dataset_Lhs2Rhs(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', eqsplit='=='):
+        super().__init__(data, index, te_ratio, separator)
+        self.eqsplit = eqsplit
+
+    def get_data_list(self):
+        self.data_list = [
+            {"label": self.data[i]['targets_string'][0] , "text": self.data[i]['reaction_string']} for i in self.index
+            # Add more dictionaries here...
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for data_point in self.data_list:
+            a = data_point["text"]
+            lhs, rhs = a.split(self.eqsplit)
+            self.data_dict["label"].append(lhs+self.separator)
+            self.data_dict["text"].append(lhs+self.separator+rhs)
+            
+
+class Dataset_Rhs2Lhs(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', eqsplit='=='):
+        super().__init__(data, index, te_ratio, separator)
+        self.eqsplit = eqsplit
+
+    def get_data_list(self):
+        self.data_list = [
+            {"label": self.data[i]['targets_string'][0] , "text": self.data[i]['reaction_string']} for i in self.index
+            # Add more dictionaries here...
+        ]
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for data_point in self.data_list:
+            a = data_point["text"]
+            lhs, rhs = a.split(self.eqsplit)
+            self.data_dict["label"].append(rhs + self.separator)    #!
+            self.data_dict["text"].append(rhs+self.separator+lhs)
+
+
+class Dataset_Ope2Ceq(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
+        super().__init__(data, index, te_ratio, separator)
+
+    def get_data_list(self):
+        self.data_list = [
+            {
+                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+                "opes": self.data[i]['operations'],
+                'eq': self.data[i]['reaction_string']
+            }
+            for i in self.index
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for d in self.data_list:
+            prompt = d['target'] + ': ' + str(d['opes'])
+            self.data_dict["label"].append(prompt+ self.separator)  #!
+            self.data_dict["text"].append(prompt+ self.separator + d['eq'])
+
+class Dataset_Ceq2Ope(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
+        super().__init__(data, index, te_ratio, separator)
+
+    def get_data_list(self):
+        self.data_list = [
+            {
+                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+                "opes": self.data[i]['operations'],
+                'eq': self.data[i]['reaction_string']
+            }
+            for i in self.index
+            # Add more dictionaries here...
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for d in self.data_list:
+            prompt = d['eq']
+            protocol = [d_['type'] for d_ in d['opes']] 
+            self.data_dict["label"].append(prompt+ self.separator)  #!
+            self.data_dict["text"].append(prompt+ self.separator +" ".join(protocol))
+
+
+
+
+class Dataset_Ope2Ceq_2(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
+        super().__init__(data, index, te_ratio, separator)
+
+    def get_data_list(self):
+        self.data_list = [
+            {
+                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+                "opes": self.data[i]['operations'],
+                'eq': self.data[i]['reaction_string']
+            }
+            for i in self.index
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for h, d in enumerate(self.data_list):
+            operations = {}
+            for i, d_ in enumerate(d['opes']):
+                ope = d_['type']
+                if d_['conditions'] is None:
+                    op = None
+                    # print([h, i], ope, op)
+                else:
+                    op = {k:a for k, a in d_['conditions'].items() if all([len(a)>0, a is not None])}
+                operations[ope]=op
                 # print([h, i], ope, op)
-            else:
-                op = {k:a for k, a in d_['conditions'].items() if all([len(a)>0, a is not None])}
-            operations[ope]=op
-            # print([h, i], ope, op)
-        prompt = d['target'] + ': ' + str(operations)
-        data_dict["label"].append(prompt)
-        data_dict["text"].append(prompt+ separator + d['eq'])
+            prompt = d['target'] + ': ' + str(operations)
+            self.data_dict["label"].append(prompt + self.separator) #!
+            self.data_dict["text"].append(prompt + self.separator + d['eq'])
 
-    # Create a Dataset
-    custom_dataset = Dataset.from_dict(data_dict)
+class Dataset_Ceq2Ope_2(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
+        super().__init__(data, index, te_ratio, separator)
 
-    # Split the dataset into train and test
-    train_dataset = custom_dataset.select(list(range(tr_num)))
-    test_dataset = custom_dataset.select(list(range(tr_num, num)))
+    def get_data_list(self):
+        self.data_list = [
+            {
+                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+                "opes": self.data[i]['operations'],
+                'eq': self.data[i]['reaction_string']
+            }
+            for i in self.index
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for h, d in enumerate(self.data_list):
+            operations = {}
+            for i, d_ in enumerate(d['opes']):
+                ope = d_['type']
+                if d_['conditions'] is None:
+                    op = None
+                    # print([h, i], ope, op)
+                else:
+                    op = {k:a for k, a in d_['conditions'].items() if all([len(a)>0, a is not None])}
+                    # print([h, i], ope, op)
+                operations[ope]=op
+            prompt = d['eq']
+            self.data_dict["label"].append(prompt + self.separator) #!
+            self.data_dict["text"].append(prompt+ self.separator +str(operations))
 
-    # Create a DatasetDict with the desired format
-    dataset_dict = DatasetDict({
-        "train": train_dataset,
-        "test": test_dataset,
-    })
 
-    return dataset_dict
+class Dataset_Ope2Ceq_3(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
+        super().__init__(data, index, te_ratio, separator)
 
-
-def dataset_ceq2ope_2(data, index=None, te_ratio=0.1, separator=' || '):
-    num = len(data)
-    te_num = int(num*te_ratio)
-    tr_num = num - te_num
-    if index is None: 
-        index = list(range(num))
-    data_list = [
-        {
-            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
-            "opes": data[i]['operations'],
-            'eq': data[i]['reaction_string']
-        }
-        for i in index
-        # Add more dictionaries here...
-    ]
-    if separator is None:
-        separator=''
-    else:
-        separator=str(separator)
-    # Convert the list of dictionaries to a dictionary of lists
-    data_dict = {"label": [], "text": []}
-    for h, d in enumerate(data_list):
-        operations = {}
-        for i, d_ in enumerate(d['opes']):
-            ope = d_['type']
-            if d_['conditions'] is None:
-                op = None
+    def get_data_list(self):
+        self.data_list = [
+            {
+                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+                "opes": self.data[i]['operations'],
+                'eq': self.data[i]['reaction_string']
+            }
+            for i in self.index
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for h, d in enumerate(self.data_list):
+            operations = {}
+            for i, d_ in enumerate(d['opes']):
+                ope = d_['type']
+                if d_['conditions'] is None:
+                    op = None
+                    # print([h, i], ope, op)
+                else:
+                    op = {}
+                    for k, a in d_['conditions'].items():
+                        if a is not None:
+                            if len(a) > 0:
+                                op[k] = a
+                operations[ope]=op
                 # print([h, i], ope, op)
-            else:
-                op = {k:a for k, a in d_['conditions'].items() if all([len(a)>0, a is not None])}
+            prompt = d['target'] + ': ' + str(operations)
+            self.data_dict["label"].append(prompt+ self.separator)  #!
+            self.data_dict["text"].append(prompt+ self.separator + d['eq'])
+
+
+
+class Dataset_Ceq2Ope_3(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
+        super().__init__(data, index, te_ratio, separator)
+
+    def get_data_list(self):
+        self.data_list = [
+            {
+                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+                "opes": self.data[i]['operations'],
+                'eq': self.data[i]['reaction_string']
+            }
+            for i in self.index
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for h, d in enumerate(self.data_list):
+            operations = {}
+            for i, d_ in enumerate(d['opes']):
+                ope = d_['type']
+                # print(ope, d_['conditions'])
+                if d_['conditions'] is None:
+                    op = None
+                    # print([h, i], ope, op)
+                else:
+                    op = {}
+                    for k, a in d_['conditions'].items():
+                        if a is not None:
+                            if len(a) > 0:
+                                op[k] = a
+                operations[ope]=op
                 # print([h, i], ope, op)
-            operations[ope]=op
-        prompt = d['eq']
-        data_dict["label"].append(prompt)
-        data_dict["text"].append(prompt+ separator +str(operations))
-
-    # Create a Dataset
-    custom_dataset = Dataset.from_dict(data_dict)
-
-    # Split the dataset into train and test
-    train_dataset = custom_dataset.select(list(range(tr_num)))
-    test_dataset = custom_dataset.select(list(range(tr_num, num)))
-
-    # Create a DatasetDict with the desired format
-    dataset_dict = DatasetDict({
-        "train": train_dataset,
-        "test": test_dataset,
-    })
-
-    return dataset_dict
+            prompt = d['eq']
+            self.data_dict["label"].append(prompt + self.separator) #!
+            self.data_dict["text"].append(prompt+ self.separator +str(operations))
 
 
-def dataset_ope2ceq_3(data, index=None, te_ratio=0.1, separator=' || '):
-    num = len(data)
-    te_num = int(num*te_ratio)
-    tr_num = num - te_num
-    if index is None: 
-        index = list(range(num))
-    # print('index: ', index)
-    data_list = [
-        {
-            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
-            "opes": data[i]['operations'],
-            'eq': data[i]['reaction_string']
-        }
-        for i in index
-        # Add more dictionaries here...
-    ]
-    # print('data_list: ', data_list)
-    if separator is None:
-        separator=''
-    else:
-        separator=str(separator)
-    # Convert the list of dictionaries to a dictionary of lists
-    data_dict = {"label": [], "text": []}
-    for h, d in enumerate(data_list):
-        operations = {}
-        for i, d_ in enumerate(d['opes']):
-            ope = d_['type']
-            if d_['conditions'] is None:
-                op = None
-                # print([h, i], ope, op)
-            else:
-                op = {}
-                for k, a in d_['conditions'].items():
-                    if a is not None:
-                        if len(a) > 0:
-                            op[k] = a
-            operations[ope]=op
-            # print([h, i], ope, op)
-        prompt = d['target'] + ': ' + str(operations)
-        data_dict["label"].append(prompt)
-        data_dict["text"].append(prompt+ separator + d['eq'])
+class Dataset_Tgt2Ceq(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
+        super().__init__(data, index, te_ratio, separator)
 
-    # Create a Dataset
-    custom_dataset = Dataset.from_dict(data_dict)
-
-    # Split the dataset into train and test
-    train_dataset = custom_dataset.select(list(range(tr_num)))
-    test_dataset = custom_dataset.select(list(range(tr_num, num)))
-
-    # Create a DatasetDict with the desired format
-    dataset_dict = DatasetDict({
-        "train": train_dataset,
-        "test": test_dataset,
-    })
-
-    return dataset_dict
-
-
-def dataset_ceq2ope_3(data, index=None, te_ratio=0.1, separator=' || '):
-    num = len(data)
-    te_num = int(num*te_ratio)
-    tr_num = num - te_num
-    if index is None: 
-        index = list(range(num))
-    data_list = [
-        {
-            "target": ", ".join(data[i]['targets_string']) if isinstance(data[i]['targets_string'], list) else data[i]['targets_string'],
-            "opes": data[i]['operations'],
-            'eq': data[i]['reaction_string']
-        }
-        for i in index
-        # Add more dictionaries here...
-    ]
-    if separator is None:
-        separator=''
-    else:
-        separator=str(separator)
-    # Convert the list of dictionaries to a dictionary of lists
-    data_dict = {"label": [], "text": []}
-    for h, d in enumerate(data_list):
-        operations = {}
-        for i, d_ in enumerate(d['opes']):
-            ope = d_['type']
-            # print(ope, d_['conditions'])
-            if d_['conditions'] is None:
-                op = None
-                # print([h, i], ope, op)
-            else:
-                op = {}
-                for k, a in d_['conditions'].items():
-                    if a is not None:
-                        if len(a) > 0:
-                            op[k] = a
-            operations[ope]=op
-            # print([h, i], ope, op)
-        prompt = d['eq']
-        data_dict["label"].append(prompt)
-        data_dict["text"].append(prompt+ separator +str(operations))
-
-    # Create a Dataset
-    custom_dataset = Dataset.from_dict(data_dict)
-
-    # Split the dataset into train and test
-    train_dataset = custom_dataset.select(list(range(tr_num)))
-    test_dataset = custom_dataset.select(list(range(tr_num, num)))
-
-    # Create a DatasetDict with the desired format
-    dataset_dict = DatasetDict({
-        "train": train_dataset,
-        "test": test_dataset,
-    })
-
-    return dataset_dict
+    def get_data_list(self):
+        self.data_list = [
+            {
+                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+                'eq': self.data[i]['reaction_string']
+            }
+            for i in self.index
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for h, d in enumerate(self.data_list):
+            prompt = d['target']
+            self.data_dict["label"].append(prompt+ self.separator)  #!
+            self.data_dict["text"].append(prompt+ self.separator + d['eq'])
+ 
 
 
 
@@ -431,15 +316,20 @@ def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'va
     Returns:
         _type_: _description_
     """
+    given = dataset[source][idx]['label']
     if separator is not None:
         separator=str(separator)
         sep_inputs = tokenizer(separator, padding=True, truncation=True, return_tensors="pt")
         sep_inputs = {key: tensor.to(device) for key, tensor in sep_inputs.items()}
         len_sep = sep_inputs['input_ids'].shape[-1]   #len(separator)
+        if given.endswith(separator):
+            prompt = given
+        else: 
+            prompt = given + separator
     else: 
         separator=''
         len_sep = 0
-    prompt = dataset[source][idx]['label'] + separator
+        prompt = given
     model_inputs = tokenizer(prompt, padding=True, truncation=True, return_tensors="pt")
     model_inputs = {key: tensor.to(device) for key, tensor in model_inputs.items()}
     input_length = model_inputs['input_ids'].shape[-1]

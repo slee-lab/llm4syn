@@ -32,8 +32,8 @@ overwrite_output_dir=True
 nepochs = 50
 lr=2e-5
 wdecay=0.01
-per_device_train_batch_size = 8  # default: 8
-per_device_eval_batch_size = 8  # default: 8
+per_device_train_batch_size = 4  # default: 8
+per_device_eval_batch_size = 4  # default: 8
 
 print('epochs: ', nepochs)
 print('learning rate: ', lr)
@@ -53,9 +53,9 @@ num_sample = int(len(data)*sample_ratio)
 separator=' || '
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = dataset_ceq2ope_3(data1, index=None, te_ratio=0.1, separator=separator) # [dataset_ope2ceq, dataset_ceq2ope, dataset_ope2ceq_2, dataset_ceq2ope_2]
+dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator).dataset # [dataset_ope2ceq, dataset_ceq2ope, dataset_ope2ceq_2, dataset_ceq2ope_2]
 hf_model = "gpt2" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
-model_name = hf_usn + '/ope_gpt2_v3.2'# '/syn_distilgpt2_v2'
+model_name = hf_usn + '/teq_gpt2_v1.1'# '/syn_distilgpt2_v2'
 tk_model = hf_model # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
