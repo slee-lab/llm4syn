@@ -74,3 +74,20 @@ output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_typ
                      separator=separator, remove_header=remove_header, cut=post_cut, source=data_source, device=device)
 
 # %%
+# model view
+from transformers import utils as t_utils
+from bertviz import model_view, head_view
+t_utils.logging.set_verbosity_error()  # Suppress standard warnings
+
+input_text = output['answer']
+model1 = AutoModelForCausalLM.from_pretrained(model_name, output_attentions=True).to(device)
+inputs = tokenizer.encode(input_text, return_tensors='pt').to(device)  # Tokenize input text
+outputs = model1(inputs).to(device)  # Run model
+attention = outputs[-1]  # Retrieve attention from model outputs
+tokens = tokenizer.convert_ids_to_tokens(inputs[0])  # Convert input ids to token strings
+
+model_view(attention, tokens)  # Display model view
+#%%
+# head view
+head_view(attention, tokens)
+#%%

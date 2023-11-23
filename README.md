@@ -28,6 +28,7 @@ Python==3.10.0
 torch==2.0.0+cu118  
 transformers==4.33.2  
 wandb==0.16.0
+bertviz  
 other basic libraries like numpy, matplotlib etc.  
 ```
 
