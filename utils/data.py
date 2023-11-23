@@ -55,9 +55,14 @@ class Dataset_template(LLMDataset):
 
 
 class Dataset_Lhs2Rhs(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', eqsplit='=='):
-        super().__init__(data, index, te_ratio, separator)
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', eqsplit='==', cut=None):
         self.eqsplit = eqsplit
+        if cut is None:
+            self.cut = '@@@@@@@@@@@@@@@'
+        else: 
+            self.cut = cut
+        super().__init__(data, index, te_ratio, separator)
+        # self.eqsplit = eqsplit
 
     def get_data_list(self):
         self.data_list = [
@@ -70,14 +75,21 @@ class Dataset_Lhs2Rhs(LLMDataset):
         for data_point in self.data_list:
             a = data_point["text"]
             lhs, rhs = a.split(self.eqsplit)
+            if self.cut in rhs:
+                rhs = rhs.split(self.cut)[0]
             self.data_dict["label"].append(lhs+self.separator)
             self.data_dict["text"].append(lhs+self.separator+rhs)
             
 
 class Dataset_Rhs2Lhs(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', eqsplit='=='):
-        super().__init__(data, index, te_ratio, separator)
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', eqsplit='==', cut=None):
         self.eqsplit = eqsplit
+        if cut is None:
+            self.cut = '@@@@@@@@@@@@@@@'
+        else: 
+            self.cut = cut
+        super().__init__(data, index, te_ratio, separator)
+        # self.eqsplit = eqsplit
 
     def get_data_list(self):
         self.data_list = [
@@ -89,6 +101,8 @@ class Dataset_Rhs2Lhs(LLMDataset):
         for data_point in self.data_list:
             a = data_point["text"]
             lhs, rhs = a.split(self.eqsplit)
+            if self.cut in rhs:
+                rhs = rhs.split(self.cut)[0]
             self.data_dict["label"].append(rhs + self.separator)    #!
             self.data_dict["text"].append(rhs+self.separator+lhs)
 
@@ -278,7 +292,11 @@ class Dataset_Ceq2Ope_3(LLMDataset):
 
 
 class Dataset_Tgt2Ceq(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        if cut is None:
+            self.cut = '@@@@@@@@@@@@@@@'
+        else: 
+            self.cut = cut
         super().__init__(data, index, te_ratio, separator)
 
     def get_data_list(self):
@@ -294,13 +312,17 @@ class Dataset_Tgt2Ceq(LLMDataset):
         self.data_dict = {"label": [], "text": []}
         for h, d in enumerate(self.data_list):
             prompt = d['target']
+            eq = d['eq']
+            if self.cut in eq:
+                eq = eq.split(self.cut)[0]
             self.data_dict["label"].append(prompt+ self.separator)  #!
-            self.data_dict["text"].append(prompt+ self.separator + d['eq'])
+            self.data_dict["text"].append(prompt+ self.separator + eq)
  
 
 
 
-def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'value': 50}, separator=None, remove_header=True, source='test',device='cuda'):
+def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'value': 50}, 
+                  separator=None, remove_header=True, cut=None, source='test',device='cuda'):
     """_summary_
 
     Args:
@@ -308,8 +330,10 @@ def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'va
         dataset (_type_): _description_
         idx (_type_): _description_
         tokenizer (_type_): _description_
-        set_length (dict, optional): _description_. Defaults to {'type': 'add', 'value': 50} or {'type': 'mul', 'value': 50}.
-        show_header (bool, optional): _description_. Defaults to False.
+        set_length (dict, optional): _description_. Defaults to {'type': 'add', 'value': 50}. Otherwise {'type': 'mul', 'value': 50}.
+        separator (_type_, optional): _description_. Defaults to None.
+        remove_header (bool, optional): _description_. Defaults to True.
+        cut (_type_, optional): _description_. Defaults to None. Set ';' if you want cut off the output after ';'. 
         source (str, optional): _description_. Defaults to 'test'.
         device (str, optional): _description_. Defaults to 'cuda'.
 
@@ -339,18 +363,26 @@ def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'va
         max_length = input_length*set_length['value']
     generated_ids = model.generate(**model_inputs, max_length=max_length)
     text = dataset[source][idx]['text']
-    print('text: ', text)   #!
+    print('text: ', text)
     encoded_text = tokenizer(text)
     if remove_header:
-        # gt_answer = tokenizer.decode(encoded_text["input_ids"][input_length+len_sep:])
-        # output = tokenizer.batch_decode(generated_ids[:, input_length+len_sep:], skip_special_tokens=True)[0]
         gt_answer = tokenizer.decode(encoded_text["input_ids"][max(input_length-1, 0):])
         output = tokenizer.batch_decode(generated_ids[:, max(input_length-1, 0):], skip_special_tokens=True)[0]
+        if cut is not None: #!
+            gt_answer = gt_answer.split(cut)[0]
+            output = output.split(cut)[0]
     else: 
         gt_answer = tokenizer.decode(encoded_text["input_ids"])
         output = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-    print('gtruth: ', gt_answer)   #!
-    print('answer: ', output)    #!
+        if cut is not None: 
+            gt_answer_cut = gt_answer.split(cut)[0]
+            if len(gt_answer_cut) >= len(prompt):
+                gt_answer = gt_answer_cut
+            output_cut = output.split(cut)[0]
+            if len(output_cut) >= len(prompt):
+                output = output_cut
+    print('gtruth: ', gt_answer) 
+    print('answer: ', output)
     return {'answer': output, 'text': text, 'label': prompt}
 
 
