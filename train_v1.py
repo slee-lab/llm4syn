@@ -50,12 +50,13 @@ data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.jso
 # data_path = '/home/rokabe/data2/cava/data/solutionsynthesis_dataset_202185.json'    # path to the solution based synthesis data (json)
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
-separator=' || '
+separator=' == '
+cut = ';'
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator).dataset # [dataset_ope2ceq, dataset_ceq2ope, dataset_ope2ceq_2, dataset_ceq2ope_2]
-hf_model = "gpt2" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
-model_name = hf_usn + '/teq_gpt2_v1.1'# '/syn_distilgpt2_v2'
+dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+hf_model = "gpt2" #"meta-llama/Llama-2-70b-chat-hf" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
+model_name = hf_usn + '/teq_gpt2_v1.2'# '/syn_distilgpt2_v2'
 tk_model = hf_model # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
@@ -152,6 +153,7 @@ trainer = Trainer(
 trainer.train()
 
 model.push_to_hub(model_name)
+tokenizer.push_to_hub(model_name)   # save tokenizer to HF
 eval_results = trainer.evaluate()
 print(f"Perplexity: {math.exp(eval_results['eval_loss']):.2f}")
 if save_indices:
