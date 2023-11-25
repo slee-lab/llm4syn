@@ -6,12 +6,14 @@ import torch
 import json
 import random
 import math
+from sklearn.model_selection import KFold  # Import KFold
 from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM, TrainingArguments, Trainer
 from transformers import DataCollatorForLanguageModeling
 seedn=42
 # random.seed(seedn)
 from utils.data import *
+from utils.model import *
 device = 'cuda'
 file_name = os.path.basename(__file__)
 print("File Name:", file_name)
@@ -29,13 +31,15 @@ run_name="cava"
 
 # hparamm for training
 overwrite_output_dir=True
-nepochs = 50
+nepochs = 50    # total eppochs for training 
+num_folds = 5
+ep_per_fold = 1
 lr=2e-5
 wdecay=0.01
 per_device_train_batch_size = 4  # default: 8
 per_device_eval_batch_size = 4  # default: 8
 
-print('epochs: ', nepochs)
+print(f'total epochs: {nepochs}, kfolds: {num_folds}, epochs per fold: {ep_per_fold}')
 print('learning rate: ', lr)
 print('weight decay: ', wdecay)
 print('per_device_train_batch_size: ', per_device_train_batch_size)
@@ -43,7 +47,6 @@ print('per_device_eval_batch_size: ', per_device_eval_batch_size)
 
 #%%
 # load data
-
 random.seed(seedn)
 sample_ratio = 1
 data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.json'  # path to the inorganic crystal synthesis data (json)
@@ -55,9 +58,9 @@ cut = ';'
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
 dataset = Dataset_Lhs2Rhs(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-hf_model =  "Dagobert42/gpt2-finetuned-material-synthesis" #"meta-llama/Llama-2-70b-chat-hf" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
-model_name = hf_usn + '/ceq_lr_mgpt_v1.3'# '/syn_distilgpt2_v2'
-tk_model = "Dagobert42/gpt2-finetuned-material-synthesis"#'m3rg-iitd/matscibert'##hf_model # set tokenizer model loaded from HF (usually same as hf_model)
+hf_model = "gpt2"   # "Dagobert42/gpt2-finetuned-material-synthesis" #"meta-llama/Llama-2-70b-chat-hf" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
+model_name = hf_usn + '/ceq_lr_gpt2_v1.6'# '/syn_distilgpt2_v2'
+tk_model = hf_model #"Dagobert42/gpt2-finetuned-material-synthesis"#'m3rg-iitd/matscibert'##hf_model # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
 save_indices = True
@@ -65,6 +68,7 @@ rm_ckpts = True
 
 print('num data: ', num_sample)
 print('hf_model: ', hf_model)
+print('tk_model: ', tk_model)
 print('model_name:', model_name)
 #%%
 # load tokenizer
@@ -92,9 +96,9 @@ print('decoded (text): ', decoded_input1)
 
 def tokenize_function(examples):
     return tokenizer(examples["text"], padding=True, truncation=True, return_tensors="pt")  # padding="max_length"
-
 # tokenized dataset
 tokenized_datasets = dataset.map(tokenize_function, batched=True, remove_columns=dataset["train"].column_names,)
+
 
 #%%
 # load model 
@@ -121,37 +125,65 @@ output0=show_one_test(model0, dataset, idx, tokenizer, set_length={'type': out_t
 
 
 #%%
+# Set up K-fold cross valudation
+kf = KFold(n_splits=num_folds, shuffle=True, random_state=seedn)
+ep_lists = get_epoch_lists(nepochs, num_folds, ep_per_fold)
+
+
+#%%
 # training
-training_args = TrainingArguments(
-    output_dir=join('models', model_name),
-    overwrite_output_dir=overwrite_output_dir,
-    num_train_epochs = nepochs,
-    evaluation_strategy="epoch",
-    learning_rate=lr,
-    weight_decay=wdecay,
-    push_to_hub=True,
-    report_to="wandb",
-    run_name=run_name,  # name of the W&B run (optional)
-    logging_steps=1,   # how often to log to W&B
-    per_device_train_batch_size=per_device_train_batch_size,
-    per_device_eval_batch_size=per_device_eval_batch_size,
-)
+epoch_count = 0
+perplexity_scores = []
+for i, ep_list in enumerate(ep_lists):
+    for fold, (train_index, val_index) in enumerate(kf.split(dataset['train'])):
+        if fold < len(ep_list):
+            print(f"Round {i}, Fold {fold + 1}/{num_folds}")
 
+            epoch = ep_list[fold]
+            # Create train and validation datasets for this fold
+            train_dataset = tokenized_datasets["train"].select(train_index)
+            val_dataset = tokenized_datasets["train"].select(val_index)
+            training_args = TrainingArguments(
+                output_dir=join('models', model_name),
+                overwrite_output_dir=overwrite_output_dir,
+                num_train_epochs = epoch,
+                evaluation_strategy="epoch",
+                learning_rate=lr,
+                weight_decay=wdecay,
+                push_to_hub=True,
+                report_to="wandb",
+                # run_name=f"{run_name}_i{i}_f{fold}", # name of the W&B run (optional)
+                run_name=run_name, # name of the W&B run (optional)
+                logging_steps=1,   # how often to log to W&B
+                per_device_train_batch_size=per_device_train_batch_size,
+                per_device_eval_batch_size=per_device_eval_batch_size,
+            )
+            trainer = Trainer(
+                model=model,
+                args=training_args,
+                train_dataset=train_dataset,
+                eval_dataset=val_dataset,
+                data_collator=data_collator,
+            )
+            trainer.train()
 
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=tokenized_datasets["train"],
-    eval_dataset=tokenized_datasets["test"],
-    data_collator=data_collator,
-)
+            # model.push_to_hub(model_name)           
+            eval_results = trainer.evaluate()
+            perplexity = math.exp(eval_results['eval_loss'])
+            print(f"Perplexity (Round {i}, Fold {fold + 1}): {perplexity:.2f}")
+            # Store the perplexity score for this fold
+            perplexity_scores.append(perplexity)
+            epoch_count += epoch
+            print('completed epochs: ', epoch_count)
+    model.push_to_hub(model_name)
+    if i==0:
+        tokenizer.push_to_hub(model_name)   # save tokenizer to HF
 
-trainer.train()
+# Calculate and print the average perplexity score across all folds
+avg_perplexity = np.mean(perplexity_scores)
+std_perplexity = np.std(perplexity_scores)
+print(f"Average Perplexity Across {num_folds} Folds: {avg_perplexity:.2f} (Std: {std_perplexity:.2f})")
 
-model.push_to_hub(model_name)
-tokenizer.push_to_hub(model_name)   # save tokenizer to HF
-eval_results = trainer.evaluate()
-print(f"Perplexity: {math.exp(eval_results['eval_loss']):.2f}")
 
 if rm_ckpts:
     rm_files = join('models', model_name, '*')

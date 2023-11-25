@@ -82,7 +82,7 @@ t_utils.logging.set_verbosity_error()  # Suppress standard warnings
 input_text = output['answer']
 model1 = AutoModelForCausalLM.from_pretrained(model_name, output_attentions=True).to(device)
 inputs = tokenizer.encode(input_text, return_tensors='pt').to(device)  # Tokenize input text
-outputs = model1(inputs).to(device)  # Run model
+outputs = model1(inputs)  # Run model
 attention = outputs[-1]  # Retrieve attention from model outputs
 tokens = tokenizer.convert_ids_to_tokens(inputs[0])  # Convert input ids to token strings
 
