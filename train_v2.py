@@ -31,13 +31,13 @@ run_name="cava"
 
 # hparamm for training
 overwrite_output_dir=True
-nepochs = 50    # total eppochs for training 
+nepochs = 200    # total eppochs for training 
 num_folds = 5
-ep_per_fold = 1
+ep_per_fold = nepochs//num_folds
 lr=2e-5
 wdecay=0.01
 per_device_train_batch_size = 4  # default: 8
-per_device_eval_batch_size = 4  # default: 8
+per_device_eval_batch_size = per_device_train_batch_size  # default: 8
 
 print(f'total epochs: {nepochs}, kfolds: {num_folds}, epochs per fold: {ep_per_fold}')
 print('learning rate: ', lr)
@@ -53,13 +53,13 @@ data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.jso
 # data_path = '/home/rokabe/data2/cava/data/solutionsynthesis_dataset_202185.json'    # path to the solution based synthesis data (json)
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
-separator=' == '
+separator=' || '
 cut = ';'
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Lhs2Rhs(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-hf_model = "gpt2"   # "Dagobert42/gpt2-finetuned-material-synthesis" #"meta-llama/Llama-2-70b-chat-hf" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
-model_name = hf_usn + '/ceq_lr_gpt2_v1.6'# '/syn_distilgpt2_v2'
+dataset = Dataset_Ceq2Ope_3(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+hf_model = "Dagobert42/gpt2-finetuned-material-synthesis" #"meta-llama/Llama-2-70b-chat-hf" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
+model_name = hf_usn + '/ope_mgpt_v1.2'# '/syn_distilgpt2_v2'
 tk_model = hf_model #"Dagobert42/gpt2-finetuned-material-synthesis"#'m3rg-iitd/matscibert'##hf_model # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
@@ -110,7 +110,7 @@ model0 = AutoModelForCausalLM.from_pretrained(hf_model).to(device)
 
 #%% 
 # Inference using model before trainign before training 
-idx = 81
+idx = 82
 data_source = 'test'
 out_type='add'
 out_size = 50
@@ -157,6 +157,9 @@ for i, ep_list in enumerate(ep_lists):
                 logging_steps=1,   # how often to log to W&B
                 per_device_train_batch_size=per_device_train_batch_size,
                 per_device_eval_batch_size=per_device_eval_batch_size,
+                save_total_limit=1, #!
+                # load_best_model_at_end=True
+                
             )
             trainer = Trainer(
                 model=model,
@@ -175,15 +178,16 @@ for i, ep_list in enumerate(ep_lists):
             perplexity_scores.append(perplexity)
             epoch_count += epoch
             print('completed epochs: ', epoch_count)
+            if fold==0:
+                tokenizer.push_to_hub(model_name)   # save tokenizer to HF
     model.push_to_hub(model_name)
-    if i==0:
-        tokenizer.push_to_hub(model_name)   # save tokenizer to HF
+    # if i==0:
+    #     tokenizer.push_to_hub(model_name)   # save tokenizer to HF
 
 # Calculate and print the average perplexity score across all folds
 avg_perplexity = np.mean(perplexity_scores)
 std_perplexity = np.std(perplexity_scores)
 print(f"Average Perplexity Across {num_folds} Folds: {avg_perplexity:.2f} (Std: {std_perplexity:.2f})")
-
 
 if rm_ckpts:
     rm_files = join('models', model_name, '*')

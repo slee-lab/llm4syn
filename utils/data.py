@@ -4,7 +4,7 @@ from datasets import DatasetDict, Dataset
 
 
 class LLMDataset:
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
         self.data = data
         self.num = len(self.data)
         self.te_ratio = te_ratio
@@ -18,6 +18,10 @@ class LLMDataset:
             self.separator=''
         else:
             self.separator=str(separator)
+        if cut is None:
+            self.cut = '@@@@@@@@@@@@@@@'
+        else: 
+            self.cut = cut
         self.get_data_list()
         self.get_data_dict()
         self.get_dataset()
@@ -43,8 +47,8 @@ class LLMDataset:
 
 
 class Dataset_template(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
-        super().__init__(data, index, te_ratio, separator)
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        super().__init__(data, index, te_ratio, separator, cut)
 
     def get_data_list(self):
         self.data_list = [
@@ -55,13 +59,9 @@ class Dataset_template(LLMDataset):
 
 
 class Dataset_Lhs2Rhs(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', eqsplit='==', cut=None):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None, eqsplit='=='):
         self.eqsplit = eqsplit
-        if cut is None:
-            self.cut = '@@@@@@@@@@@@@@@'
-        else: 
-            self.cut = cut
-        super().__init__(data, index, te_ratio, separator)
+        super().__init__(data, index, te_ratio, separator, cut)
         # self.eqsplit = eqsplit
 
     def get_data_list(self):
@@ -82,13 +82,9 @@ class Dataset_Lhs2Rhs(LLMDataset):
             
 
 class Dataset_Rhs2Lhs(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', eqsplit='==', cut=None):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None, eqsplit='=='):
         self.eqsplit = eqsplit
-        if cut is None:
-            self.cut = '@@@@@@@@@@@@@@@'
-        else: 
-            self.cut = cut
-        super().__init__(data, index, te_ratio, separator)
+        super().__init__(data, index, te_ratio, separator, cut)
         # self.eqsplit = eqsplit
 
     def get_data_list(self):
@@ -108,8 +104,8 @@ class Dataset_Rhs2Lhs(LLMDataset):
 
 
 class Dataset_Ope2Ceq(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
-        super().__init__(data, index, te_ratio, separator)
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        super().__init__(data, index, te_ratio, separator, cut)
 
     def get_data_list(self):
         self.data_list = [
@@ -124,13 +120,16 @@ class Dataset_Ope2Ceq(LLMDataset):
     def get_data_dict(self):
         self.data_dict = {"label": [], "text": []}
         for d in self.data_list:
+            eq = d['eq']
+            if self.cut in eq:
+                eq = eq.split(self.cut)[0]
             prompt = d['target'] + ': ' + str(d['opes'])
             self.data_dict["label"].append(prompt+ self.separator)  #!
-            self.data_dict["text"].append(prompt+ self.separator + d['eq'])
+            self.data_dict["text"].append(prompt+ self.separator + eq)
 
 class Dataset_Ceq2Ope(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
-        super().__init__(data, index, te_ratio, separator)
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        super().__init__(data, index, te_ratio, separator, cut)
 
     def get_data_list(self):
         self.data_list = [
@@ -146,7 +145,10 @@ class Dataset_Ceq2Ope(LLMDataset):
     def get_data_dict(self):
         self.data_dict = {"label": [], "text": []}
         for d in self.data_list:
-            prompt = d['eq']
+            eq = d['eq']
+            if self.cut in eq:
+                eq = eq.split(self.cut)[0]
+            prompt = eq
             protocol = [d_['type'] for d_ in d['opes']] 
             self.data_dict["label"].append(prompt+ self.separator)  #!
             self.data_dict["text"].append(prompt+ self.separator +" ".join(protocol))
@@ -155,8 +157,8 @@ class Dataset_Ceq2Ope(LLMDataset):
 
 
 class Dataset_Ope2Ceq_2(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
-        super().__init__(data, index, te_ratio, separator)
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        super().__init__(data, index, te_ratio, separator, cut)
 
     def get_data_list(self):
         self.data_list = [
@@ -181,13 +183,16 @@ class Dataset_Ope2Ceq_2(LLMDataset):
                     op = {k:a for k, a in d_['conditions'].items() if all([len(a)>0, a is not None])}
                 operations[ope]=op
                 # print([h, i], ope, op)
+            eq = d['eq']
+            if self.cut in eq:
+                eq = eq.split(self.cut)[0]
             prompt = d['target'] + ': ' + str(operations)
             self.data_dict["label"].append(prompt + self.separator) #!
-            self.data_dict["text"].append(prompt + self.separator + d['eq'])
+            self.data_dict["text"].append(prompt + self.separator + eq)
 
 class Dataset_Ceq2Ope_2(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
-        super().__init__(data, index, te_ratio, separator)
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        super().__init__(data, index, te_ratio, separator, cut)
 
     def get_data_list(self):
         self.data_list = [
@@ -212,14 +217,17 @@ class Dataset_Ceq2Ope_2(LLMDataset):
                     op = {k:a for k, a in d_['conditions'].items() if all([len(a)>0, a is not None])}
                     # print([h, i], ope, op)
                 operations[ope]=op
-            prompt = d['eq']
+            eq = d['eq']
+            if self.cut in eq:
+                eq = eq.split(self.cut)[0]
+            prompt = eq
             self.data_dict["label"].append(prompt + self.separator) #!
             self.data_dict["text"].append(prompt+ self.separator +str(operations))
 
 
 class Dataset_Ope2Ceq_3(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
-        super().__init__(data, index, te_ratio, separator)
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        super().__init__(data, index, te_ratio, separator, cut)
 
     def get_data_list(self):
         self.data_list = [
@@ -248,15 +256,18 @@ class Dataset_Ope2Ceq_3(LLMDataset):
                                 op[k] = a
                 operations[ope]=op
                 # print([h, i], ope, op)
+            eq = d['eq']
+            if self.cut in eq:
+                eq = eq.split(self.cut)[0]
             prompt = d['target'] + ': ' + str(operations)
             self.data_dict["label"].append(prompt+ self.separator)  #!
-            self.data_dict["text"].append(prompt+ self.separator + d['eq'])
+            self.data_dict["text"].append(prompt+ self.separator + eq)
 
 
 
 class Dataset_Ceq2Ope_3(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || '):
-        super().__init__(data, index, te_ratio, separator)
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        super().__init__(data, index, te_ratio, separator, cut)
 
     def get_data_list(self):
         self.data_list = [
@@ -286,18 +297,17 @@ class Dataset_Ceq2Ope_3(LLMDataset):
                                 op[k] = a
                 operations[ope]=op
                 # print([h, i], ope, op)
-            prompt = d['eq']
+            eq = d['eq']
+            if self.cut in eq:
+                eq = eq.split(self.cut)[0]
+            prompt = eq
             self.data_dict["label"].append(prompt + self.separator) #!
             self.data_dict["text"].append(prompt+ self.separator +str(operations))
 
 
 class Dataset_Tgt2Ceq(LLMDataset):
     def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
-        if cut is None:
-            self.cut = '@@@@@@@@@@@@@@@'
-        else: 
-            self.cut = cut
-        super().__init__(data, index, te_ratio, separator)
+        super().__init__(data, index, te_ratio, separator, cut)
 
     def get_data_list(self):
         self.data_list = [
