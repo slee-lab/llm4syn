@@ -150,6 +150,7 @@ class Dataset_Ceq2Ope(LLMDataset):
                 eq = eq.split(self.cut)[0]
             prompt = eq
             protocol = [d_['type'] for d_ in d['opes']] 
+            protocol = [x.replace('Operation', '') for x in protocol]   #!
             self.data_dict["label"].append(prompt+ self.separator)  #!
             self.data_dict["text"].append(prompt+ self.separator +" ".join(protocol))
 
@@ -304,6 +305,45 @@ class Dataset_Ceq2Ope_3(LLMDataset):
             self.data_dict["label"].append(prompt + self.separator) #!
             self.data_dict["text"].append(prompt+ self.separator +str(operations))
 
+
+class Dataset_Ceq2Ope_4(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        super().__init__(data, index, te_ratio, separator, cut)
+
+    def get_data_list(self):
+        self.data_list = [
+            {
+                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+                "opes": self.data[i]['operations'],
+                'eq': self.data[i]['reaction_string']
+            }
+            for i in self.index
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for h, d in enumerate(self.data_list):
+            operations = {}
+            for i, d_ in enumerate(d['opes']):
+                ope = d_['type']
+                # print(ope, d_['conditions'])
+                if d_['conditions'] is None:
+                    op = None
+                    # print([h, i], ope, op)
+                else:
+                    op = {}
+                    for k, a in d_['conditions'].items():
+                        if a is not None:
+                            if len(a) > 0:
+                                op[k] = a
+                operations[ope]=op
+                # print([h, i], ope, op)
+            eq = d['eq']
+            if self.cut in eq:
+                eq = eq.split(self.cut)[0]
+            prompt = eq
+            self.data_dict["label"].append(prompt + self.separator) #!
+            self.data_dict["text"].append(prompt+ self.separator +str(operations))
 
 class Dataset_Tgt2Ceq(LLMDataset):
     def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):

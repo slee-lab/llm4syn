@@ -20,7 +20,7 @@ Paste the API key and your Username in 'env_config.py'.
 
 ### (2-2) WandB
 https://wandb.ai/site  
-MMake accoutn and login  
+Make accoutn and login  
 
 ## (3) Setup envs
 ```
