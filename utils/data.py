@@ -369,6 +369,30 @@ class Dataset_Tgt2Ceq(LLMDataset):
             self.data_dict["text"].append(prompt+ self.separator + eq)
  
 
+class Dataset_Ceq(LLMDataset): # for BERT task
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        super().__init__(data, index, te_ratio, separator, cut)
+
+    def get_data_list(self):
+        self.data_list = [
+            {
+                # "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+                'eq': self.data[i]['reaction_string']
+            }
+            for i in self.index
+        ]
+        
+    def get_data_dict(self):
+        # self.data_dict = {"label": [], "text": []}
+        self.data_dict = {"text": []}
+        for h, d in enumerate(self.data_list):
+            # prompt = d['target']
+            eq = d['eq']
+            # if self.cut in eq:
+            #     eq = eq.split(self.cut)[0]
+            # self.data_dict["label"].append(prompt+ self.separator)  # no need
+            self.data_dict["text"].append(eq)
+ 
 
 
 def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'value': 50}, 
