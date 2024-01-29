@@ -383,14 +383,14 @@ class Dataset_Ceq(LLMDataset): # for BERT task
         ]
         
     def get_data_dict(self):
-        # self.data_dict = {"label": [], "text": []}
-        self.data_dict = {"text": []}
+        self.data_dict = {"label": [], "text": []}
+        # self.data_dict = {"text": []}
         for h, d in enumerate(self.data_list):
             # prompt = d['target']
             eq = d['eq']
             # if self.cut in eq:
             #     eq = eq.split(self.cut)[0]
-            # self.data_dict["label"].append(prompt+ self.separator)  # no need
+            self.data_dict["label"].append(eq)  # no need
             self.data_dict["text"].append(eq)
  
 
