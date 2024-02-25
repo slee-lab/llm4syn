@@ -5,5 +5,6 @@ RyotaroOkabe
 chem_eq/
 __pycache__/
 wandb/
+benchmark/
 
 *sh
