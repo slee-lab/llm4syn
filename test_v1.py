@@ -72,7 +72,8 @@ print(idx)
 print('<<our prediction>>')
 output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
                      separator=separator, remove_header=remove_header, cut=post_cut, source=data_source, device=device)
-
+print('gtruth: ', output['text']) 
+print('answer: ', output['answer'])
 # %%
 # model view
 from transformers import utils as t_utils

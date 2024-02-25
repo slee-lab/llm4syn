@@ -437,7 +437,7 @@ def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'va
         max_length = input_length*set_length['value']
     generated_ids = model.generate(**model_inputs, max_length=max_length)
     text = dataset[source][idx]['text']
-    print('text: ', text)
+    # print('text: ', text)
     encoded_text = tokenizer(text)
     if remove_header:
         gt_answer = tokenizer.decode(encoded_text["input_ids"][max(input_length-1, 0):])
@@ -455,8 +455,8 @@ def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'va
             output_cut = output.split(cut)[0]
             if len(output_cut) >= len(prompt):
                 output = output_cut
-    print('gtruth: ', gt_answer) 
-    print('answer: ', output)
+    # print('gtruth: ', gt_answer) 
+    # print('answer: ', output)
     return {'answer': output, 'text': text, 'label': prompt}
 
 
