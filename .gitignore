@@ -6,5 +6,6 @@ chem_eq/
 __pycache__/
 wandb/
 benchmark/
+save/
 
 *sh

@@ -3,6 +3,8 @@ import torch
 from datasets import DatasetDict, Dataset
 
 
+remove_ing_exception = {'Shaping': 'Shape'}
+
 class LLMDataset:
     def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
         self.data = data
@@ -150,7 +152,7 @@ class Dataset_Ceq2Ope(LLMDataset):
                 eq = eq.split(self.cut)[0]
             prompt = eq
             protocol = [d_['type'] for d_ in d['opes']] 
-            protocol = [x.replace('Operation', '') for x in protocol]   #!
+            protocol_ = [x.replace('Operation', '') for x in protocol]   #!
             self.data_dict["label"].append(prompt+ self.separator)  #!
             self.data_dict["text"].append(prompt+ self.separator +" ".join(protocol))
 
@@ -345,6 +347,78 @@ class Dataset_Ceq2Ope_4(LLMDataset):
             self.data_dict["label"].append(prompt + self.separator) #!
             self.data_dict["text"].append(prompt+ self.separator +str(operations))
 
+
+class Dataset_Ope2Ceq_simple(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        super().__init__(data, index, te_ratio, separator, cut)
+
+    def get_data_list(self):
+        self.data_list = [
+            {
+                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+                "opes": self.data[i]['operations'],
+                'eq': self.data[i]['reaction_string']
+            }
+            for i in self.index
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for h, d in enumerate(self.data_list):
+            protocol = [d_['type'] for d_ in d['opes']] 
+            protocol_ = [x.replace('Operation', '') for x in protocol]   #!
+            protocol = []
+            for x in protocol_:
+                if x in remove_ing_exception.keys():
+                    protocol.append(x.replace(x, remove_ing_exception[x]))
+                else: 
+                    protocol.append(x)
+            protocol = [x.replace('ing', '') for x in protocol]   #!
+                # print([h, i], ope, op)
+            eq = d['eq']
+            if self.cut in eq:
+                eq = eq.split(self.cut)[0]
+            prompt = d['target'] + ': ' +  " ".join(protocol)
+            self.data_dict["label"].append(prompt+ self.separator)  #!
+            self.data_dict["text"].append(prompt+ self.separator + eq)
+            
+
+class Dataset_Ceq2Ope_simple(LLMDataset):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
+        super().__init__(data, index, te_ratio, separator, cut)
+
+    def get_data_list(self):
+        self.data_list = [
+            {
+                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+                "opes": self.data[i]['operations'],
+                'eq': self.data[i]['reaction_string']
+            }
+            for i in self.index
+            # Add more dictionaries here...
+        ]
+        
+    def get_data_dict(self):
+        self.data_dict = {"label": [], "text": []}
+        for d in self.data_list:
+            eq = d['eq']
+            if self.cut in eq:
+                eq = eq.split(self.cut)[0]
+            prompt = eq
+            protocol = [d_['type'] for d_ in d['opes']] 
+            protocol_ = [x.replace('Operation', '') for x in protocol]   #!
+            protocol = []
+            for x in protocol_:
+                if x in remove_ing_exception.keys():
+                    protocol.append(x.replace(x, remove_ing_exception[x]))
+                else: 
+                    protocol.append(x)
+            protocol = [x.replace('ing', '') for x in protocol]   #!
+            self.data_dict["label"].append(prompt+ self.separator)  #!
+            self.data_dict["text"].append(prompt+ self.separator +" ".join(protocol))
+
+
+
 class Dataset_Tgt2Ceq(LLMDataset):
     def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
         super().__init__(data, index, te_ratio, separator, cut)
@@ -404,7 +478,7 @@ def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'va
         dataset (_type_): _description_
         idx (_type_): _description_
         tokenizer (_type_): _description_
-        set_length (dict, optional): _description_. Defaults to {'type': 'add', 'value': 50}. Otherwise {'type': 'mul', 'value': 50}.
+        set_length (dict, optional): _description_. Defaults to {'type': 'add', 'value': 50}. Otherwise {'type': 'mul', 'value': 1.2}.
         separator (_type_, optional): _description_. Defaults to None.
         remove_header (bool, optional): _description_. Defaults to True.
         cut (_type_, optional): _description_. Defaults to None. Set ';' if you want cut off the output after ';'. 

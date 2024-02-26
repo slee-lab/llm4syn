@@ -11,6 +11,7 @@ from transformers import AutoModelForCausalLM
 seedn=42
 # random.seed(seedn)
 from utils.data import *
+from utils.metrics import *
 device = 'cuda'
 file_name = os.path.basename(__file__)
 print("File Name:", file_name)
@@ -33,9 +34,10 @@ separator=' || '
 cut = None #';'
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset  # [dataset_ope2ceq, dataset_ceq2ope, dataset_ope2ceq_2, dataset_ceq2ope_2]
+dataset = Dataset_Rhs2Lhs(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+run_name ='ceq_rl_mgpt_v1.2'
 # hf_model = "gpt2" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
-model_name = hf_usn + '/tgt_mgpt_v1.4'# '/syn_distilgpt2_v2'
+model_name = join(hf_usn, run_name)    # '/ope_mgpt_v1.1' #'/tgt_mgpt_v1.4'
 tk_model = model_name # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
@@ -62,10 +64,10 @@ model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 
 #%%
 # Inference using trained model 
-idx = 24
-data_source = 'test'
-out_type='add'
-out_size = 70
+idx = 40
+data_source = 'test'  
+out_type='mul'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
+out_size = 2.3 # 120, 2.5
 remove_header=False
 post_cut = ';'
 print(idx)

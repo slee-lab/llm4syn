@@ -5,8 +5,36 @@ from rdkit import DataStructs
 from rdkit.Chem import AllChem
 import re
 import numpy as np
+import csv
+from tqdm import tqdm
 from itertools import product
 from scipy.optimize import linear_sum_assignment
+
+chemical_symbols = [
+
+    # 1
+    'H', 'He',
+    # 2
+    'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
+    # 3
+    'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar',
+    # 4
+    'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn',
+    'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr',
+    # 5
+    'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd',
+    'In', 'Sn', 'Sb', 'Te', 'I', 'Xe',
+    # 6
+    'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy',
+    'Ho', 'Er', 'Tm', 'Yb', 'Lu',
+    'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi',
+    'Po', 'At', 'Rn',
+    # 7
+    'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk',
+    'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr',
+    'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc',
+    'Lv', 'Ts', 'Og']
+
 
 def parse_formula_to_vector(formula):
     """Parse a chemical formula into a vector (dict) of element counts."""
@@ -150,7 +178,33 @@ def equation_similarity(equation1, equation2, whole_equation=True, split='->'):
     sim_r, sim_p, sim = (sim_r1+sim_r2)/2, (sim_p1+sim_p2)/2, (sim1+sim2)/2
     return sim_r, sim_p, sim
 
+def find_atomic_species(formula):
+    # Regular expression pattern for element symbols: one uppercase letter followed by an optional lowercase letter
+    pattern = r'[A-Z][a-z]?'
+    
+    # Find all occurrences of the pattern in the formula string
+    elements = re.findall(pattern, formula)
+    
+    # Remove duplicates by converting the list to a set, then convert back to a list if needed
+    unique_elements = list(set(elements))
+    # print('unieuq_elements: ', unique_elements)
+    chem_list = []
+    for el in unique_elements:
+        if el in chemical_symbols:
+            chem_list.append(el)
+        else: 
+            if el[0] in chemical_symbols:
+                chem_list.append(el[0])
+ 
+    return list(set(chem_list))
 
+def save_dict_as_csv(dictionary, filename):
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        # Write the header row, if needed
+        # writer.writerow(['Element', 'Value'])
+        for key, value in dictionary.items():
+            writer.writerow([key, value])
 
 def exact_match_accuracy(target, prediction):
     return target.strip() == prediction.strip()

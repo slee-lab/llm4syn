@@ -25,9 +25,9 @@ from env_config import *
 login(hf_api_key_w, add_to_git_credential=True)
 # wandb
 import wandb
-os.environ["WANDB_PROJECT"] = "syn_method" # name your W&B project 
+os.environ["WANDB_PROJECT"] = "llm4chem" # name your W&B project 
 # os.environ["WANDB_LOG_MODEL"] = "checkpoint" # log all model checkpoints
-run_name="cava"
+run_name="llm4chem"
 
 # hparamm for training
 overwrite_output_dir=True
@@ -57,9 +57,10 @@ separator=' || '
 cut = ';'
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-hf_model = "Dagobert42/gpt2-finetuned-material-synthesis" #"meta-llama/Llama-2-70b-chat-hf" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
-model_name = hf_usn + '/tgt_mgpt_v1.4'# '/syn_distilgpt2_v2'
+dataset = Dataset_Ceq2Ope_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+run_name ='ope_simple_gpt_v1.1'
+hf_model = "gpt2" #"Dagobert42/gpt2-finetuned-material-synthesis" #"meta-llama/Llama-2-70b-chat-hf" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
+model_name = join(hf_usn, run_name)# '/syn_distilgpt2_v2'
 tk_model = hf_model #"Dagobert42/gpt2-finetuned-material-synthesis"#'m3rg-iitd/matscibert'##hf_model # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
@@ -114,15 +115,19 @@ idx = 82
 data_source = 'test'
 out_type='add'
 out_size = 50
-remove_header=True
+remove_header=False
 print(idx)
 print('<<our prediction (before training)>>')
 output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
                      separator=separator, remove_header=remove_header, source=data_source, device=device)
+print('gtruth: ', output['text']) 
+print('answer: ', output['answer'])
+
 print('<<Without training>>')
 output0=show_one_test(model0, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
                       separator=separator, remove_header=remove_header, source=data_source, device=device)
-
+print('gtruth: ', output0['text']) 
+print('answer: ', output0['answer'])
 
 #%%
 # Set up K-fold cross valudation
