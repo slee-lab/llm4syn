@@ -6,6 +6,7 @@ import torch
 import json
 import random
 import math
+from tqdm import tqdm
 from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM
 seedn=42
@@ -34,8 +35,10 @@ separator=' || '
 cut = None #';'
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Rhs2Lhs(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-run_name ='ceq_rl_mgpt_v1.2'
+# dataset = Dataset_Rhs2Lhs(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+# run_name ='ceq_rl_mgpt_v1.2'
+dataset = Dataset_Ope2Ceq_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+run_name ='ceq_simple_dgpt_v1.1'
 # hf_model = "gpt2" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
 model_name = join(hf_usn, run_name)    # '/ope_mgpt_v1.1' #'/tgt_mgpt_v1.4'
 tk_model = model_name # set tokenizer model loaded from HF (usually same as hf_model)
@@ -66,8 +69,8 @@ model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 # Inference using trained model 
 idx = 40
 data_source = 'test'  
-out_type='mul'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
-out_size = 2.3 # 120, 2.5
+out_type='add'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
+out_size = 80 # 120, 2.5
 remove_header=False
 post_cut = ';'
 print(idx)
@@ -76,6 +79,46 @@ output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_typ
                      separator=separator, remove_header=remove_header, cut=post_cut, source=data_source, device=device)
 print('gtruth: ', output['text']) 
 print('answer: ', output['answer'])
+
+label = output['label']
+len_label = len(label)
+eq_pred = output['answer'][len_label:]
+eq_gt = output['text'][len_label:]
+similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=False, split='==')
+print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
+
+#%%
+num_sample = len(dataset[data_source])
+sim_reacs, sim_prods, sim_all = [], [], []
+chem_dict = {el:[] for el in chemical_symbols}
+
+for idx in tqdm(range(num_sample), desc="Processing"):
+    output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
+                     separator=separator, remove_header=remove_header, cut=post_cut, source=data_source, device=device)
+    label = output['label']
+    len_label = len(label)
+    eq_pred = output['answer'][len_label:]
+    eq_gt = output['text'][len_label:]
+    similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='==')
+    sim_reacs.append(similarity_reactants)
+    sim_prods.append(similarity_products)
+    sim_all.append(overall_similarity)
+    label_elements = find_atomic_species(label)
+    for el in label_elements:
+        chem_dict[el].append(overall_similarity)
+
+print(model_name)
+print(f"(average) Reactants Similarity: {np.mean(sim_reacs):.2f}, Products Similarity: {np.mean(sim_prods):.2f}, Overall Similarity: {np.mean(sim_all):.2f}")
+chem_mean_dict = {key: float(np.mean(value)) for key, value in chem_dict.items() if value}
+header = run_name + '_' + data_source #'r2l_mean'
+filename = f'./save/{header}_{num_sample}.csv'
+save_dict_as_csv(chem_mean_dict, filename)
+print(f"Dictionary saved as {filename}")
+
+from utils.periodic_trends import plotter
+p = plotter(filename, output_filename=f'./save/{header}_{num_sample}.html')
+
+
 # %%
 # model view
 from transformers import utils as t_utils
