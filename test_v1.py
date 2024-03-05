@@ -37,8 +37,8 @@ rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
 # dataset = Dataset_Rhs2Lhs(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
 # run_name ='ceq_rl_mgpt_v1.2'
-dataset = Dataset_Ope2Ceq_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-run_name ='ceq_simple_dgpt_v1.1'
+dataset = Dataset_Ceq2Ope_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+run_name ='ope_simple_dgpt_v1.2'
 # hf_model = "gpt2" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
 model_name = join(hf_usn, run_name)    # '/ope_mgpt_v1.1' #'/tgt_mgpt_v1.4'
 tk_model = model_name # set tokenizer model loaded from HF (usually same as hf_model)
@@ -67,7 +67,7 @@ model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 
 #%%
 # Inference using trained model 
-idx = 40
+idx = 50
 data_source = 'test'  
 out_type='add'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
 out_size = 80 # 120, 2.5
