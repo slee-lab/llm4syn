@@ -88,7 +88,7 @@ similarity_reactants, similarity_products, overall_similarity = equation_similar
 print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
 
 #%%
-num_sample = len(dataset[data_source])
+num_sample = 5 #len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
 chem_dict = {el:[] for el in chemical_symbols}
 
@@ -116,7 +116,7 @@ save_dict_as_csv(chem_mean_dict, filename)
 print(f"Dictionary saved as {filename}")
 
 from utils.periodic_trends import plotter
-p = plotter(filename, output_filename=f'./save/{header}_{num_sample}.html')
+p = plotter(filename, output_filename=f'./save/{header}_{num_sample}.html', under_value=0, over_value=1)
 
 
 # %%

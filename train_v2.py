@@ -30,12 +30,12 @@ os.environ["WANDB_PROJECT"] = "llm4chem" # name your W&B project
 
 # hparamm for training
 overwrite_output_dir=True
-nepochs = 400    # total eppochs for training 
-num_folds = 5
+nepochs = 200    # total eppochs for training 
+num_folds = 10
 ep_per_fold = nepochs//num_folds
 lr=2e-5
 wdecay=0.01
-per_device_train_batch_size = 2  # default: 8
+per_device_train_batch_size = 4  # default: 8
 per_device_eval_batch_size = per_device_train_batch_size  # default: 8
 
 print(f'total epochs: {nepochs}, kfolds: {num_folds}, epochs per fold: {ep_per_fold}')
@@ -57,9 +57,9 @@ cut = ';'
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
 dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-run_name ='tgt2ceq_dgpt_v1.3'
+run_name ='tgt2ceq_dgpt_v1.4'
 hf_model = "distilbert/distilgpt2" #'RyotaroOKabe/tgt2ceq_dgpt_v1.2'   # # "gpt2" #"Dagobert42/gpt2-finetuned-material-synthesis" #"meta-llama/Llama-2-70b-chat-hf" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
-model_name = join(hf_usn, run_name)# '/syn_distilgpt2_v2'
+model_name = join(hf_usn, run_name) # '/syn_distilgpt2_v2'
 tk_model = hf_model #"Dagobert42/gpt2-finetuned-material-synthesis"#'m3rg-iitd/matscibert'##hf_model # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
