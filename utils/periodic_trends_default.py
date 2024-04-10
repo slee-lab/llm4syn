@@ -180,14 +180,14 @@ def plotter(
                     f"Entry for element {datum} is negative but log-scale is selected"
                 )
         color_mapper = LogColorMapper(
-            palette=bokeh_palette, low=0.0, high=1.0   #!low=min(data), high=max(data)
+            palette=bokeh_palette, low=min(data), high=max(data)
         )
-        norm = LogNorm(vmin=0.0, vmax=1.0)  #!LogNorm(vmin=min(data), vmax=max(data))
+        norm = LogNorm(vmin=min(data), vmax=max(data))
     else:
         color_mapper = LinearColorMapper(
-            palette=bokeh_palette, low=0.0, high=1.0    #!, low=min(data), high=max(data)
+            palette=bokeh_palette, low=min(data), high=max(data)
         )
-        norm = Normalize(vmin=0.0, vmax=1.0)    #!Normalize(vmin=min(data), vmax=max(data))
+        norm = Normalize(vmin=min(data), vmax=max(data))
     color_scale = ScalarMappable(norm=norm, cmap=cmap).to_rgba(data, alpha=None)
 
     # Set blank color

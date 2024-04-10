@@ -37,8 +37,8 @@ rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
 # dataset = Dataset_Rhs2Lhs(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
 # run_name ='ceq_rl_mgpt_v1.2'
-dataset = Dataset_Ceq2Ope_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-run_name ='ope_simple_dgpt_v1.2'
+dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+run_name ='tgt2ceq_dgpt_v1.3'
 # hf_model = "gpt2" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
 model_name = join(hf_usn, run_name)    # '/ope_mgpt_v1.1' #'/tgt_mgpt_v1.4'
 tk_model = model_name # set tokenizer model loaded from HF (usually same as hf_model)
@@ -67,7 +67,7 @@ model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 
 #%%
 # Inference using trained model 
-idx = 50
+idx = 7
 data_source = 'test'  
 out_type='add'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
 out_size = 80 # 120, 2.5
@@ -84,11 +84,11 @@ label = output['label']
 len_label = len(label)
 eq_pred = output['answer'][len_label:]
 eq_gt = output['text'][len_label:]
-similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=False, split='==')
+similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='==')
 print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
 
 #%%
-num_sample = 5 #len(dataset[data_source])
+num_sample = len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
 chem_dict = {el:[] for el in chemical_symbols}
 
