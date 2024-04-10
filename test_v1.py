@@ -21,36 +21,30 @@ from huggingface_hub import login
 from env_config import *
 login(hf_api_key_w, add_to_git_credential=True)
 
-# import wandb
-# os.environ["WANDB_PROJECT"] = "syn_method" # name your W&B project 
-
 #%%
+# [1] Load dataset
 random.seed(seedn)
 sample_ratio = 1
 data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.json'  # path to the inorganic crystal synthesis data (json)
-# data_path = '/home/rokabe/data2/cava/data/solutionsynthesis_dataset_202185.json'    # path to the solution based synthesis data (json)
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
-separator=' || '
-cut = None #';'
+separator=' || '    #!
+cut = None #';' #!
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-# dataset = Dataset_Rhs2Lhs(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-# run_name ='ceq_rl_mgpt_v1.2'
-dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-run_name ='tgt2ceq_dgpt_v1.3'
-# hf_model = "gpt2" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
-model_name = join(hf_usn, run_name)    # '/ope_mgpt_v1.1' #'/tgt_mgpt_v1.4'
+dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset    #!
+run_name ='tgt2ceq_dgpt_v1.3'   #!
+model_name = join(hf_usn, run_name) 
 tk_model = model_name # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
 save_indices = True
 
 #%%
-# load tokenizer
+# [2] load tokenizer
 tokenizer = AutoTokenizer.from_pretrained(tk_model) 
 if pad_tokenizer:
-    tokenizer.pad_token = tokenizer.eos_token   #!
+    tokenizer.pad_token = tokenizer.eos_token  
     # tokenizer.add_special_tokens({'pad_token': '[PAD]'})  # checkk if we need this line. 
 
 def tokenize_function(examples):
@@ -62,11 +56,11 @@ small_train_dataset = tokenized_datasets["train"].shuffle(seed=seedn)
 small_eval_dataset = tokenized_datasets["test"].shuffle(seed=seedn)
 
 #%%
-# load model
+# [3] load model
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 
 #%%
-# Inference using trained model 
+# [4] Inference using trained model 
 idx = 7
 data_source = 'test'  
 out_type='add'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
@@ -88,6 +82,7 @@ similarity_reactants, similarity_products, overall_similarity = equation_similar
 print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
 
 #%%
+# [5] Plot element-wise prediction accuracy.
 num_sample = len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
 chem_dict = {el:[] for el in chemical_symbols}
@@ -120,7 +115,7 @@ p = plotter(filename, output_filename=f'./save/{header}_{num_sample}.html', unde
 
 
 # %%
-# model view
+# [6] model view (optional)
 from transformers import utils as t_utils
 from bertviz import model_view, head_view
 t_utils.logging.set_verbosity_error()  # Suppress standard warnings
