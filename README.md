@@ -1,5 +1,6 @@
 # LLM4Mat
 Synthesis recipe generation
+Predict chemical equation
 
 ## (0) Create folders
 ./data/  
