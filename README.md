@@ -1,4 +1,4 @@
-# CAVA
+# LLM4Mat
 Synthesis recipe generation
 
 ## (0) Create folders
