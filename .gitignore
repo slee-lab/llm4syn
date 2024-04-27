@@ -9,3 +9,6 @@ benchmark/
 save/
 
 *sh
+
+test_lhs2rhs.py
+test_llama3.py

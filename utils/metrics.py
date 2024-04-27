@@ -9,6 +9,7 @@ import csv
 from tqdm import tqdm
 from itertools import product
 from scipy.optimize import linear_sum_assignment
+import re
 
 chemical_symbols = [
 
@@ -120,17 +121,31 @@ def compare_components(components1, components2):
 
 def equation_similarity_(equation1, equation2, whole_equation=True, split='->'):
     if whole_equation:
-        reactants1, products1 = split_equation(equation1, split)
-        reactants2, products2 = split_equation(equation2, split)
-        
+        # print('[0] equation1: ', equation1)
+        # print('[0] equation2: ', equation2)
+        # print('siplit: ', split)
+        if split in equation1:
+            reactants1, products1 = split_equation(equation1, split)
+        else: 
+            reactants1, products1 = split_half(equation1)
+        if split in equation2:
+            reactants2, products2 = split_equation(equation2, split)
+        else: 
+            reactants2, products2 = split_half(equation2)
+        # print('[0] reactants1: ', reactants1)
+        # print('[0] products1: ', products1)
+        # print('[0] reactants2: ', reactants2)
+        # print('[0] products2: ', products2) 
+     
         similarity_reactants = compare_components(reactants1, reactants2)
         similarity_products = compare_components(products1, products2)
         
         overall_similarity = (similarity_reactants + similarity_products) / 2
     else:
-        components1 = equation1.split(" + ")
-        components2 = equation2.split(" + ")
-        
+        components1 = equation1.split("+")
+        components2 = equation2.split("+")
+
+        # print('components1, components2: ', components1, components2)
         overall_similarity = compare_components(components1, components2)
         similarity_reactants = similarity_products = overall_similarity  # In this case, they are the same
     

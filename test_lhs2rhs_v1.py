@@ -9,6 +9,7 @@ import math
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM
+import pickle as pkl
 seedn=42
 # random.seed(seedn)
 from utils.data import *
@@ -28,12 +29,12 @@ sample_ratio = 1
 data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.json'  # path to the inorganic crystal synthesis data (json)
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
-separator=' || '    #!
-cut = None #';' #!
+separator='=='    #!
+cut = ';' #!
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset    #!
-run_name ='tgt2ceq_dgpt_v1.3'   #!
+dataset = Dataset_Lhs2Rhs(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset    #!
+run_name ='lhs2rhs_dgpt_v1.1'   #!
 model_name = join(hf_usn, run_name) 
 tk_model = model_name # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
@@ -58,10 +59,11 @@ small_eval_dataset = tokenized_datasets["test"].shuffle(seed=seedn)
 #%%
 # [3] load model
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+model0 = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2").to(device)
 
 #%%
 # [4] Inference using trained model 
-idx = 8
+idx = 45
 data_source = 'test'  
 out_type='mul'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
 out_size = 2.1 # 120, 2.5
@@ -71,21 +73,24 @@ print(idx)
 print('<<our prediction>>')
 output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
                      separator=separator, remove_header=remove_header, cut=post_cut, source=data_source, device=device)
-print('gtruth: ', output['text']) 
-print('answer: ', output['answer'])
 
 label = output['label']
 len_label = len(label)
 eq_pred = output['answer']
 eq_gt = output['text']
 if remove_header:
-    eq_pred = eq_pred[len_label:]
+    # eq_pred = eq_pred[len_label:]
     eq_gt = eq_gt[len_label:]
-similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, splits=[separator, '||'])
+eq_gt = eq_gt.replace('||', '')
+eq_pred = eq_pred.replace('||', '')
+print('gtruth: ', eq_gt) 
+print('answer: ', eq_pred)
+similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=False, split=separator)#['=='])#, separator, '||', '=='])
 print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
 
 #%%
 # [5] Plot element-wise prediction accuracy.
+tag = 'v3'
 num_sample = len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
 chem_dict = {el:[] for el in chemical_symbols}
@@ -98,9 +103,9 @@ for idx in tqdm(range(num_sample), desc="Processing"):
     eq_pred = output['answer']
     eq_gt = output['text']
     if remove_header:
-        eq_pred = eq_pred[len_label:]
+        # eq_pred = eq_pred[len_label:]
         eq_gt = eq_gt[len_label:]
-    similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, splits=[separator, '||'])
+    similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=False, split=separator)
     sim_reacs.append(similarity_reactants)
     sim_prods.append(similarity_products)
     sim_all.append(overall_similarity)
@@ -112,12 +117,16 @@ print(model_name)
 print(f"(average) Reactants Similarity: {np.mean(sim_reacs):.2f}, Products Similarity: {np.mean(sim_prods):.2f}, Overall Similarity: {np.mean(sim_all):.2f}")
 chem_mean_dict = {key: float(np.mean(value)) for key, value in chem_dict.items() if value}
 header = run_name + '_' + data_source #'r2l_mean'
-filename = f'./save/{header}_{num_sample}.csv'
+filename = f'./save/{header}_{num_sample}_{tag}.csv'
 save_dict_as_csv(chem_mean_dict, filename)
 print(f"Dictionary saved as {filename}")
+# save chem_dict as pkl
+with open(f'./save/{header}_{num_sample}_{tag}.pkl', 'wb') as f:
+    pkl.dump(chem_dict, f)
 
 from utils.periodic_trends import plotter
-p = plotter(filename, output_filename=f'./save/{header}_{num_sample}.html', under_value=0, over_value=1)
+p = plotter(filename, output_filename=f'./save/{header}_{num_sample}_{tag}.html', under_value=0, over_value=1)
+
 
 
 # %%
@@ -137,4 +146,3 @@ model_view(attention, tokens)  # Display model view
 #%%
 # head view
 head_view(attention, tokens)
-#%%
