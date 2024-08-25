@@ -23,11 +23,11 @@ from env_config import *
 login(hf_api_key_w, add_to_git_credential=True)
 # wandb
 import wandb
-os.environ["WANDB_PROJECT"] = "syn_method" # name your W&B project 
+os.environ["WANDB_PROJECT"] = "syn_method" # name your W&B project  #TODO add this to config file
 # os.environ["WANDB_LOG_MODEL"] = "checkpoint" # log all model checkpoints
-run_name="cava"
+run_name="cava"  #TODO add this to config file
 
-# hparamm for training
+# hparam for training
 overwrite_output_dir=True
 nepochs = 50
 lr=2e-5

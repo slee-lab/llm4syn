@@ -11,6 +11,7 @@ from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM
 import pickle as pkl
 import matplotlib.pyplot as plt
+import pandas as pd
 seedn=42
 # random.seed(seedn)
 from utils.data import *
@@ -97,7 +98,7 @@ num_sample = len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
 lens_tgt, lens_ceq = [], []
 chem_dict = {el:[] for el in chemical_symbols}
-
+df = pd.DataFrame(columns=['idx', 'prompt', 'target', 'gt', 'pred', 'similarity'])
 for idx in tqdm(range(num_sample), desc="Processing"):
     try:
         out_type='add'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
@@ -109,7 +110,8 @@ for idx in tqdm(range(num_sample), desc="Processing"):
         len_label = len(label)
         eq_pred = output['answer']
         eq_gt = output['text']
-        len_tgt, len_ceq = len(eq_gt.split(separator)[0].split(':')[0]), len(eq_gt.split(separator)[1])
+        target, ceq = eq_gt.split(separator)[0].split(':')[0], eq_gt.split(separator)[1]
+        len_tgt, len_ceq = len(target), len(ceq)
         lens_tgt.append(len_tgt)
         lens_ceq.append(len_ceq)
         if remove_header:
@@ -120,6 +122,7 @@ for idx in tqdm(range(num_sample), desc="Processing"):
         sim_prods.append(similarity_products)
         sim_all.append(overall_similarity)
         label_elements = find_atomic_species(label)
+        df = df._append({'idx': idx, 'prompt': label, 'target': target, 'gt': eq_gt, 'pred': eq_pred, 'similarity': overall_similarity}, ignore_index=True)
         for el in label_elements:
             chem_dict[el].append(overall_similarity)
     except Exception as e:
@@ -162,6 +165,9 @@ fig.savefig(f'./save/{header}_{num_sample}_{tag}_scatter.png')
 
 len_data = np.array([lens_tgt, lens_ceq, sim_all]).T
 np.save(f'./save/{header}_{num_sample}_{tag}_len_data.npy', len_data)
+
+# save df as csv 
+df.to_csv(f'./save/{header}_{num_sample}_{tag}_df.csv')
 
 # %%
 # [6] model view (optional)

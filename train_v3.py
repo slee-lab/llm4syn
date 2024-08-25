@@ -6,27 +6,23 @@ import torch
 import json
 import random
 import math
-from sklearn.model_selection import KFold  # Import KFold
+from sklearn.model_selection import KFold 
 from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM, TrainingArguments, Trainer
 from transformers import DataCollatorForLanguageModeling
-seedn=42
-# random.seed(seedn)
+from huggingface_hub import login 
+import wandb
+from env_config import * 
 from utils.data import *
 from utils.model import *
-device = 'cuda'
 file_name = os.path.basename(__file__)
 # use f-string for all print statements
 print(f'{file_name=}')
 
 #%%
-# login
-from huggingface_hub import login    #TODO move this to the top
-from env_config import *    #TODO move this to the top
+# launch HF ans WandB
 login(hf_api_key_w, add_to_git_credential=True)
-# wandb
-import wandb    #TODO move this to the top
-os.environ["WANDB_PROJECT"] = "llm4chem" # name your W&B project    #TODO add this to config file
+os.environ["WANDB_PROJECT"] = wandb_project 
 # os.environ["WANDB_LOG_MODEL"] = "checkpoint" # log all model checkpoints
 
 # hparamm for training    #TODO save the config for wandb??
@@ -39,18 +35,16 @@ wdecay=0.01
 per_device_train_batch_size = 4  # default: 8
 per_device_eval_batch_size = per_device_train_batch_size  # default: 8
 
-print(f'total epochs: {nepochs}, kfolds: {num_folds}, epochs per fold: {ep_per_fold}')
-print(f'{lr=}')
-print(f'{wdecay=}')
-print(f'{per_device_train_batch_size=}')
-print(f'{per_device_eval_batch_size=}')
+conf_dict = make_dict([
+    file_name, nepochs, num_folds, ep_per_fold, lr, wdecay, 
+    per_device_train_batch_size, per_device_eval_batch_size
+])
+print(conf_dict)
 
 #%%
 # load data
 random.seed(seedn)
 sample_ratio = 1
-data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.json'  # path to the inorganic crystal synthesis data (json)   #TODO put all config part into one place (or should we put this to the config file??)
-# data_path = '/home/rokabe/data2/cava/data/solutionsynthesis_dataset_202185.json'    # path to the solution based synthesis data (json)
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
 separator=' || '    #TODO: how can we specify it in a smart manner??

@@ -36,8 +36,8 @@ separator='||'    #!
 cut = ';' #!
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset    #!
-run_name ='tgt2ceq_dgpt_v1.3'   #!
+dataset = Dataset_Ceq2Ope_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset    #!
+run_name ='ope_simple_dgpt_v1.2'   #!
 model_name = join(hf_usn, run_name) 
 tk_model = model_name # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
@@ -66,10 +66,11 @@ model0 = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2").to(device
 
 #%%
 # [4] Inference using trained model 
-idx = 10
+idx = 30
 data_source = 'test'  
 out_type='add'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
-out_size = min(500, 4.0*len(dataset[data_source][idx]['label'].split(':')[0]))
+# out_size = min(500, 4.0*len(dataset[data_source][idx]['label'].split(':')[0]))
+out_size = 100
 remove_header=True
 post_cut = ';'
 print(idx)
@@ -80,91 +81,96 @@ output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_typ
 label = output['label']
 len_label = len(label)
 eq_pred = output['answer']
-eq_gt = output['text']
+text_gt = output['text']
 if remove_header:
     # eq_pred = eq_pred[len_label:]
-    eq_gt = eq_gt[len_label:]
-eq_gt = eq_gt.replace('||', '')
-eq_pred = eq_pred.replace('||', '')
-print('gtruth: ', eq_gt) 
-print('answer: ', eq_pred)
-similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='==')#['=='])#, separator, '||', '=='])
-print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
+    text_gt = text_gt[len_label:]
+text_gt = text_gt.replace('||', '')
+text_pred = eq_pred.replace('||', '')
+print('gtruth: ', text_gt) 
+print('answer: ', text_pred)
+# similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='==')#['=='])#, separator, '||', '=='])
+# print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
 
 #%%
 # [5] Plot element-wise prediction accuracy.
-tag = 'v4.1'
+tag = 'v1.6'
 num_sample = len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
-lens_tgt, lens_ceq = [], []
+lens_ceq, lens_opes = [], []
 chem_dict = {el:[] for el in chemical_symbols}
-df = pd.DataFrame(columns=['idx', 'prompt', 'target', 'gt', 'pred', 'similarity'])
-
+df = pd.DataFrame(columns=['idx', 'prompt', 'gt', 'ceq_gt', 'opes_gt', 'pred'])
 for idx in tqdm(range(num_sample), desc="Processing"):
     try:
         out_type='add'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
-        out_size = min(500, 4.0*len(dataset[data_source][idx]['label'].split(':')[0]))
+        # out_size = min(500, 4.0*len(dataset[data_source][idx]['label'].split(':')[0]))
+        out_size = 10
         print('out_size: ', out_size)
         output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
                         separator=separator, remove_header=remove_header, cut=post_cut, source=data_source, device=device)
         label = output['label']
         len_label = len(label)
-        eq_pred = output['answer']
-        eq_gt = output['text']
-        target, ceq = eq_gt.split(separator)[0], eq_gt.split(separator)[1]
-        len_tgt, len_ceq = len(eq_gt.split(separator)[0]), len(eq_gt.split(separator)[1])
-        lens_tgt.append(len_tgt)
+        text_pred = output['answer']
+        text_gt = output['text']
+        ceq_gt, opes_gt = text_gt.split(separator)
+        len_ceq, len_opes = len(ceq_gt), len(opes_gt.split(' '))
         lens_ceq.append(len_ceq)
-        if remove_header:
-            # eq_pred = eq_pred[len_label:]
-            eq_gt = eq_gt[len_label:]
-        similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='==')
-        sim_reacs.append(similarity_reactants)
-        sim_prods.append(similarity_products)
-        sim_all.append(overall_similarity)
+        lens_opes.append(len_opes)
+        # if remove_header:
+        #     # eq_pred = eq_pred[len_label:]
+        #     text_gt = text_gt[len_label:]
+        # similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='==')
+        # sim_reacs.append(similarity_reactants)
+        # sim_prods.append(similarity_products)
+        # sim_all.append(overall_similarity)
         label_elements = find_atomic_species(label)
-        df = df._append({'idx': idx, 'prompt': label, 'target': target, 'gt': eq_gt, 'pred': eq_pred, 'similarity': overall_similarity}, ignore_index=True)
-        for el in label_elements:
-            chem_dict[el].append(overall_similarity)
+        # df = df._append({'idx': idx, 'prompt': label, 'gt': text_gt, 'ceq_gt': ceq_gt, 'opes_gt': opes_gt, 'pred': text_pred}, ignore_index=True)
+        df = df._append({'idx': idx, 'prompt': label, 'gt': text_gt, 'ceq_gt': ceq_gt, 'opes_gt': opes_gt, 'pred': text_pred}, ignore_index=True)
+        # for el in label_elements:
+        #     chem_dict[el].append(overall_similarity)
     except Exception as e:
         print(f"Error at idx={idx}: {e}")
 
-print(model_name)
-print(f"(average) Reactants Similarity: {np.mean(sim_reacs):.2f}, Products Similarity: {np.mean(sim_prods):.2f}, Overall Similarity: {np.mean(sim_all):.2f}")
-chem_mean_dict = {key: float(np.mean(value)) for key, value in chem_dict.items() if value}
 header = run_name + '_' + data_source #'r2l_mean'
-filename = f'./save/{header}_{num_sample}_{tag}.csv'
-save_dict_as_csv(chem_mean_dict, filename)
-print(f"Dictionary saved as {filename}")
-# save chem_dict as pkl
-with open(f'./save/{header}_{num_sample}_{tag}.pkl', 'wb') as f:
-    pkl.dump(chem_dict, f)
+# filename = f'./save/{header}_{num_sample}_{tag}.csv'
 
-from utils.periodic_trends import plotter
-p = plotter(filename, output_filename=f'./save/{header}_{num_sample}_{tag}.html', under_value=0, over_value=1)
+# print(model_name)
+# print(f"(average) Reactants Similarity: {np.mean(sim_reacs):.2f}, Products Similarity: {np.mean(sim_prods):.2f}, Overall Similarity: {np.mean(sim_all):.2f}")
+# chem_mean_dict = {key: float(np.mean(value)) for key, value in chem_dict.items() if value}
+# header = run_name + '_' + data_source #'r2l_mean'
+# filename = f'./save/{header}_{num_sample}_{tag}.csv'
+# save_dict_as_csv(chem_mean_dict, filename)
+# print(f"Dictionary saved as {filename}")
+# # save chem_dict as pkl
+# with open(f'./save/{header}_{num_sample}_{tag}.pkl', 'wb') as f:
+#     pkl.dump(chem_dict, f)
 
-fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-ax = axs[0]
-# ax.scatter(lens_tgt, sim_reacs, s=5, color='blue', label='Reactants')
-# ax.scatter(lens_tgt, sim_prods, s=5, color='red', label='Products')
-ax.scatter(lens_tgt, sim_all, s=5, color=good_colors['green'], label='Overall')
-ax.set_xlabel('Wrt target lengths', fontsize=14)
-ax.set_ylabel('Accuracy', fontsize=14)
-# ax.legend()
+# from utils.periodic_trends import plotter
+# p = plotter(filename, output_filename=f'./save/{header}_{num_sample}_{tag}.html', under_value=0, over_value=1)
 
-ax = axs[1]
-# ax.scatter(lens_ceq, sim_reacs, s=5, color='blue', label='Reactants')
-# ax.scatter(lens_ceq, sim_prods, s=5, color='red', label='Products')
-ax.scatter(lens_ceq, sim_all, s=5, color=good_colors['green'], label='Overall')
-ax.set_xlabel('Wrt full equation lengths', fontsize=14)
-ax.set_ylabel('Accuracy', fontsize=14)
-# ax.legend()
 
-fig.suptitle(f'{header}_{num_sample}_{tag}', fontsize=16)
-fig.savefig(f'./save/{header}_{num_sample}_{tag}_scatter.png')
+# fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+# ax = axs[0]
+# # ax.scatter(lens_tgt, sim_reacs, s=5, color='blue', label='Reactants')
+# # ax.scatter(lens_tgt, sim_prods, s=5, color='red', label='Products')
+# ax.scatter(lens_tgt, sim_all, s=5, color=good_colors['green'], label='Overall')
+# ax.set_xlabel('Wrt target lengths', fontsize=14)
+# ax.set_ylabel('Accuracy', fontsize=14)
+# # ax.legend()
 
-len_data = np.array([lens_tgt, lens_ceq, sim_all]).T
-np.save(f'./save/{header}_{num_sample}_{tag}_len_data.npy', len_data)
+# ax = axs[1]
+# # ax.scatter(lens_ceq, sim_reacs, s=5, color='blue', label='Reactants')
+# # ax.scatter(lens_ceq, sim_prods, s=5, color='red', label='Products')
+# ax.scatter(lens_ceq, sim_all, s=5, color=good_colors['green'], label='Overall')
+# ax.set_xlabel('Wrt full equation lengths', fontsize=14)
+# ax.set_ylabel('Accuracy', fontsize=14)
+# # ax.legend()
+
+# fig.suptitle(f'{header}_{num_sample}_{tag}', fontsize=16)
+# fig.savefig(f'./save/{header}_{num_sample}_{tag}_scatter.png')
+
+# len_data = np.array([lens_tgt, lens_ceq, sim_all]).T
+# np.save(f'./save/{header}_{num_sample}_{tag}_len_data.npy', len_data)
 
 # save df as csv 
 df.to_csv(f'./save/{header}_{num_sample}_{tag}_df.csv')
