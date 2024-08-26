@@ -514,7 +514,7 @@ def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'va
         max_length = input_length + int(set_length['value'])
     else: 
         max_length = input_length*set_length['value']
-    generated_ids = model.generate(**model_inputs, max_length=max_length)
+    generated_ids = model.generate(**model_inputs, max_length=max_length, repetition_penalty=1.1)
     text = dataset[source][idx]['text']
     # print('text: ', text)
     encoded_text = tokenizer(text)

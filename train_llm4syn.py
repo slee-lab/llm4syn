@@ -6,27 +6,23 @@ import torch
 import json
 import random
 import math
-from sklearn.model_selection import KFold  # Import KFold
+from sklearn.model_selection import KFold 
 from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM, TrainingArguments, Trainer
 from transformers import DataCollatorForLanguageModeling
-seedn=42
-# random.seed(seedn)
+from huggingface_hub import login 
+import wandb
+from env_config import * 
 from utils.data import *
 from utils.model import *
-device = 'cuda'
 file_name = os.path.basename(__file__)
 # use f-string for all print statements
 print(f'{file_name=}')
 
 #%%
-# login
-from huggingface_hub import login    #TODO move this to the top
-from env_config import *    #TODO move this to the top
+# launch HF ans WandB
 login(hf_api_key_w, add_to_git_credential=True)
-# wandb
-import wandb    #TODO move this to the top
-os.environ["WANDB_PROJECT"] = "llm4chem" # name your W&B project    #TODO add this to config file
+os.environ["WANDB_PROJECT"] = wandb_project 
 # os.environ["WANDB_LOG_MODEL"] = "checkpoint" # log all model checkpoints
 
 # hparamm for training    #TODO save the config for wandb??
@@ -39,27 +35,25 @@ wdecay=0.01
 per_device_train_batch_size = 4  # default: 8
 per_device_eval_batch_size = per_device_train_batch_size  # default: 8
 
-print(f'total epochs: {nepochs}, kfolds: {num_folds}, epochs per fold: {ep_per_fold}')
-print(f'{lr=}')
-print(f'{wdecay=}')
-print(f'{per_device_train_batch_size=}')
-print(f'{per_device_eval_batch_size=}')
+conf_dict = make_dict([
+    file_name, nepochs, num_folds, ep_per_fold, lr, wdecay, 
+    per_device_train_batch_size, per_device_eval_batch_size
+])
+print(conf_dict)
 
 #%%
 # load data
 random.seed(seedn)
 sample_ratio = 1
-data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.json'  # path to the inorganic crystal synthesis data (json)   #TODO put all config part into one place (or should we put this to the config file??)
-# data_path = '/home/rokabe/data2/cava/data/solutionsynthesis_dataset_202185.json'    # path to the solution based synthesis data (json)
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
 separator=' || '    #TODO: how can we specify it in a smart manner??
 cut = ';'
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Ceq2Ope_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-run_name ='ope2ceq_simple_dgpt_v1.3.1'  #TODO put all config part into one place
-hf_model = "distilbert/distilgpt2" #'RyotaroOKabe/tgt2ceq_dgpt_v1.2'   # # "gpt2" #"Dagobert42/gpt2-finetuned-material-synthesis" #"meta-llama/Llama-2-70b-chat-hf" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
+dataset = Dataset_Ope2Ceq_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+run_name ='ope2ceq_simple_gpt2_v1.1.1'  #TODO put all config part into one place
+hf_model = "distilbert/distilgpt2"  #"gpt2" #'RyotaroOKabe/tgt2ceq_dgpt_v1.2'   # # "gpt2" #"Dagobert42/gpt2-finetuned-material-synthesis" #"meta-llama/Llama-2-70b-chat-hf" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
 model_name = join(hf_usn, run_name) # '/syn_distilgpt2_v2'  #TODO any newer model? 
 tk_model = hf_model #"Dagobert42/gpt2-finetuned-material-synthesis"#'m3rg-iitd/matscibert'##hf_model # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 

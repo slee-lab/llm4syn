@@ -10,10 +10,13 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM
 import pickle as pkl
+import matplotlib.pyplot as plt
+import pandas as pd
 seedn=42
 # random.seed(seedn)
 from utils.data import *
 from utils.metrics import *
+from utils.plot_data import *
 device = 'cuda'
 file_name = os.path.basename(__file__)
 print("File Name:", file_name)
@@ -26,15 +29,15 @@ login(hf_api_key_w, add_to_git_credential=True)
 # [1] Load dataset
 random.seed(seedn)
 sample_ratio = 1
-data_path = '/home/rokabe/data2/cava/data/solid-state_dataset_2019-06-27_upd.json'  # path to the inorganic crystal synthesis data (json)
+data_path = '/home/rokabe/data2/llm4syn/data/solid-state_dataset_2019-06-27_upd.json'  # path to the inorganic crystal synthesis data (json)
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
 separator='||'    #!
 cut = ';' #!
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Tgt2Ceq(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset    #!
-run_name ='tgt2ceq_dgpt_v1.3'   #!
+dataset = Dataset_Ope2Ceq_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset    #!
+run_name ='ceq_simple_dgpt_v1.4'   #!
 model_name = join(hf_usn, run_name) 
 tk_model = model_name # set tokenizer model loaded from HF (usually same as hf_model)
 load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
@@ -63,7 +66,7 @@ model0 = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2").to(device
 
 #%%
 # [4] Inference using trained model 
-idx = 10
+idx = 30
 data_source = 'test'  
 out_type='add'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
 out_size = min(500, 4.0*len(dataset[data_source][idx]['label'].split(':')[0]))
@@ -90,11 +93,12 @@ print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Sim
 
 #%%
 # [5] Plot element-wise prediction accuracy.
-tag = 'v4'
+tag = 'v5.5'
 num_sample = len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
+lens_tgt, lens_ceq = [], []
 chem_dict = {el:[] for el in chemical_symbols}
-
+df = pd.DataFrame(columns=['idx', 'prompt', 'target', 'gt', 'pred', 'similarity'])
 for idx in tqdm(range(num_sample), desc="Processing"):
     try:
         out_type='add'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
@@ -106,6 +110,10 @@ for idx in tqdm(range(num_sample), desc="Processing"):
         len_label = len(label)
         eq_pred = output['answer']
         eq_gt = output['text']
+        target, ceq = eq_gt.split(separator)[0].split(':')[0], eq_gt.split(separator)[1]
+        len_tgt, len_ceq = len(target), len(ceq)
+        lens_tgt.append(len_tgt)
+        lens_ceq.append(len_ceq)
         if remove_header:
             # eq_pred = eq_pred[len_label:]
             eq_gt = eq_gt[len_label:]
@@ -114,6 +122,7 @@ for idx in tqdm(range(num_sample), desc="Processing"):
         sim_prods.append(similarity_products)
         sim_all.append(overall_similarity)
         label_elements = find_atomic_species(label)
+        df = df._append({'idx': idx, 'prompt': label, 'target': target, 'gt': eq_gt, 'pred': eq_pred, 'similarity': overall_similarity}, ignore_index=True)
         for el in label_elements:
             chem_dict[el].append(overall_similarity)
     except Exception as e:
@@ -133,6 +142,32 @@ with open(f'./save/{header}_{num_sample}_{tag}.pkl', 'wb') as f:
 from utils.periodic_trends import plotter
 p = plotter(filename, output_filename=f'./save/{header}_{num_sample}_{tag}.html', under_value=0, over_value=1)
 
+
+fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+ax = axs[0]
+# ax.scatter(lens_tgt, sim_reacs, s=5, color='blue', label='Reactants')
+# ax.scatter(lens_tgt, sim_prods, s=5, color='red', label='Products')
+ax.scatter(lens_tgt, sim_all, s=5, color=good_colors['green'], label='Overall')
+ax.set_xlabel('Wrt target lengths', fontsize=14)
+ax.set_ylabel('Accuracy', fontsize=14)
+# ax.legend()
+
+ax = axs[1]
+# ax.scatter(lens_ceq, sim_reacs, s=5, color='blue', label='Reactants')
+# ax.scatter(lens_ceq, sim_prods, s=5, color='red', label='Products')
+ax.scatter(lens_ceq, sim_all, s=5, color=good_colors['green'], label='Overall')
+ax.set_xlabel('Wrt full equation lengths', fontsize=14)
+ax.set_ylabel('Accuracy', fontsize=14)
+# ax.legend()
+
+fig.suptitle(f'{header}_{num_sample}_{tag}', fontsize=16)
+fig.savefig(f'./save/{header}_{num_sample}_{tag}_scatter.png')
+
+len_data = np.array([lens_tgt, lens_ceq, sim_all]).T
+np.save(f'./save/{header}_{num_sample}_{tag}_len_data.npy', len_data)
+
+# save df as csv 
+df.to_csv(f'./save/{header}_{num_sample}_{tag}_df.csv')
 
 # %%
 # [6] model view (optional)
