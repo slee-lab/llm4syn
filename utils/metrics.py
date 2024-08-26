@@ -205,3 +205,91 @@ def component_wise_accuracy(target, prediction):
     return reactants_correct and products_correct
 
 
+#240825 additional metrics  #TODO: benchmarking
+
+import Levenshtein
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import torch
+import torch.nn.functional as F
+from nltk.translate.bleu_score import sentence_bleu
+from rouge import Rouge
+
+def levenshtein_loss(str1, str2):
+    return Levenshtein.distance(str1, str2)
+
+def cosine_similarity_loss(str1, str2):
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform([str1, str2])
+    return cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+
+def cosine_similarity_embeddings(embedding1, embedding2):
+    return F.cosine_similarity(embedding1, embedding2)
+
+def jaccard_similarity(str1, str2):
+    set1 = set(str1.split())
+    set2 = set(str2.split())
+    return len(set1.intersection(set2)) / len(set1.union(set2))
+
+def bleu_score(reference, candidate):
+    return sentence_bleu([reference.split()], candidate.split())
+
+def rouge_score(reference, candidate):
+    rouge = Rouge()
+    scores = rouge.get_scores(candidate, reference)
+    return scores
+
+
+import re
+from collections import Counter
+
+def parse_chemical_equation(equation):
+    reactants, products = equation.split("->")
+    reactants = reactants.strip().split('+')
+    products = products.strip().split('+')
+    return [r.strip() for r in reactants], [p.strip() for p in products]
+
+def canonicalize_molecule(molecule):
+    elements = re.findall(r'([A-Z][a-z]*)(\d*)', molecule)
+    element_counter = Counter({element: int(count) if count else 1 for element, count in elements})
+    return element_counter
+
+def canonicalize_equation(equation):
+    reactants, products = parse_chemical_equation(equation)
+    canonical_reactants = sorted([canonicalize_molecule(r) for r in reactants])
+    canonical_products = sorted([canonicalize_molecule(p) for p in products])
+    return canonical_reactants, canonical_products
+
+def compare_molecules(mol1, mol2):
+    """
+    Compares two molecules using Levenshtein distance to account for typos.
+    Returns True if the molecules are similar enough, otherwise False.
+    """
+    mol1_str = "".join(f"{k}{v}" for k, v in sorted(mol1.items()))
+    mol2_str = "".join(f"{k}{v}" for k, v in sorted(mol2.items()))
+    distance = Levenshtein.distance(mol1_str, mol2_str)
+    # Allow for a small typo threshold (e.g., 1 edit)
+    return distance <= 1
+
+def compare_chemical_equations(eq1, eq2):
+    reactants1, products1 = canonicalize_equation(eq1)
+    reactants2, products2 = canonicalize_equation(eq2)
+    
+    if len(reactants1) != len(reactants2) or len(products1) != len(products2):
+        return False
+    
+    # Compare reactants and products using a typo-tolerant comparison
+    for r1, r2 in zip(reactants1, reactants2):
+        if not compare_molecules(r1, r2):
+            return False
+    for p1, p2 in zip(products1, products2):
+        if not compare_molecules(p1, p2):
+            return False
+    
+    return True
+
+
+
+
+
+

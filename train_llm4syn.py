@@ -39,7 +39,6 @@ conf_dict = make_dict([
     file_name, nepochs, num_folds, ep_per_fold, lr, wdecay, 
     per_device_train_batch_size, per_device_eval_batch_size
 ])
-print(conf_dict)
 
 #%%
 # load data
@@ -53,21 +52,19 @@ rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
 dataset = Dataset_Ope2Ceq_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
 run_name ='ope2ceq_simple_gpt2_v1.1.1'  #TODO put all config part into one place
-hf_model = "distilbert/distilgpt2"  #"gpt2" #'RyotaroOKabe/tgt2ceq_dgpt_v1.2'   # # "gpt2" #"Dagobert42/gpt2-finetuned-material-synthesis" #"meta-llama/Llama-2-70b-chat-hf" #"EleutherAI/gpt-neo-1.3B"   #"EleutherAI/gpt-j-6B"  #"distilgpt2"     #"distilgpt2" #'pranav-s/MaterialsBERT'   #'Dagobert42/gpt2-finetuned-material-synthesis'   #'m3rg-iitd/matscibert'   #'HongyangLi/Matbert-finetuned-squad'
+hf_model = "distilbert/distilgpt2" 
 model_name = join(hf_usn, run_name) # '/syn_distilgpt2_v2'  #TODO any newer model? 
-tk_model = hf_model #"Dagobert42/gpt2-finetuned-material-synthesis"#'m3rg-iitd/matscibert'##hf_model # set tokenizer model loaded from HF (usually same as hf_model)
-load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
+tk_model = hf_model
+load_pretrained=False 
 pad_tokenizer=True
 save_indices = True
 rm_ckpts = True
 
-print('num data: ', num_sample)
-print('hf_model: ', hf_model)
-print('tk_model: ', tk_model)
-print('model_name:', model_name)
+conf_dict.update(make_dict([run_name, hf_model, model_name, tk_model, load_pretrained, pad_tokenizer, save_indices, rm_ckpts]))
+print(conf_dict)
 #%%
 # load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(tk_model) 
+tokenizer = AutoTokenizer.from_pretrained(tk_model)     #TODO: check the utility oof tokenizer and data collator 
 if pad_tokenizer:
     tokenizer.pad_token = tokenizer.eos_token   #!
     # tokenizer.add_special_tokens({'pad_token': '[PAD]'})  # checkk if we need this line. #TODO case by case..??
@@ -107,12 +104,12 @@ model0 = AutoModelForCausalLM.from_pretrained(hf_model).to(device)
 # Inference using model before trainign before training #TODOdelete this section in the end?? 
 idx = 82
 data_source = 'test'
-out_type='add'
+out_type='add'  #TODO we will parse this section from the config in the end
 out_size = 50
 remove_header=False
 print(idx)
 print('<<our prediction (before training)>>')
-output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
+output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size},  #TODO: modify function for easier optimization. 
                      separator=separator, remove_header=remove_header, source=data_source, device=device)
 print('gtruth: ', output['text']) 
 print('answer: ', output['answer'])
@@ -130,7 +127,7 @@ ep_lists = get_epoch_lists(nepochs, num_folds, ep_per_fold)
 
 
 #%%
-# training
+# training  #TODO: can we make this part more concise??
 epoch_count = 0
 perplexity_scores = []
 for i, ep_list in enumerate(ep_lists):
