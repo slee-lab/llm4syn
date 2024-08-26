@@ -46,12 +46,12 @@ random.seed(seedn)
 sample_ratio = 1
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
-separator=' || '    #TODO: how can we specify it in a smart manner??
+separator='<-'    #TODO: how can we specify it in a smart manner??
 cut = ';'
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Ope2Ceq_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-run_name ='ope2ceq_simple_gpt2_v1.1.1'  #TODO put all config part into one place
+dataset = Dataset_Rhs2Lhs(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+run_name ='B_dgpt2_v1.1.1'  #TODO put all config part into one place
 hf_model = "distilbert/distilgpt2" 
 model_name = join(hf_usn, run_name) # '/syn_distilgpt2_v2'  #TODO any newer model? 
 tk_model = hf_model
@@ -124,7 +124,7 @@ print('answer: ', output0['answer'])
 # Set up K-fold cross valudation
 kf = KFold(n_splits=num_folds, shuffle=True, random_state=seedn)
 ep_lists = get_epoch_lists(nepochs, num_folds, ep_per_fold)
-
+print(f'{ep_lists=}')
 
 #%%
 # training  #TODO: can we make this part more concise??
@@ -132,50 +132,53 @@ epoch_count = 0
 perplexity_scores = []
 for i, ep_list in enumerate(ep_lists):
     for fold, (train_index, val_index) in enumerate(kf.split(dataset['train'])):
-        if fold < len(ep_list):
-            print(f"Round {i}, Fold {fold + 1}/{num_folds}")
+        if fold >= len(ep_list):    #! if the number of epochs is not enough for the number of folds,
+            continue
+        print(f"Round {i}, Fold {fold + 1}/{num_folds}")
 
-            epoch = ep_list[fold]
-            # Create train and validation datasets for this fold
-            train_dataset = tokenized_datasets["train"].select(train_index)
-            val_dataset = tokenized_datasets["train"].select(val_index)
-            training_args = TrainingArguments(
-                output_dir=join('models', model_name),
-                overwrite_output_dir=overwrite_output_dir,
-                num_train_epochs = epoch,
-                evaluation_strategy="epoch",
-                learning_rate=lr,
-                weight_decay=wdecay,
-                push_to_hub=True,
-                report_to="wandb",
-                # run_name=f"{run_name}_i{i}_f{fold}", # name of the W&B run (optional)
-                run_name=run_name, # name of the W&B run (optional)
-                logging_steps=1,   # how often to log to W&B
-                per_device_train_batch_size=per_device_train_batch_size,
-                per_device_eval_batch_size=per_device_eval_batch_size,
-                save_total_limit=1, #!
-                # load_best_model_at_end=True
-                
-            )
-            trainer = Trainer(
-                model=model,
-                args=training_args,
-                train_dataset=train_dataset,
-                eval_dataset=val_dataset,
-                data_collator=data_collator,
-            )
-            trainer.train()
+        epoch = ep_list[fold]
+        # Create train and validation datasets for this fold
+        train_dataset = tokenized_datasets["train"].select(train_index)
+        val_dataset = tokenized_datasets["train"].select(val_index)
+        training_args = TrainingArguments(
+            output_dir=join('models', model_name),
+            overwrite_output_dir=overwrite_output_dir,
+            num_train_epochs = epoch,
+            evaluation_strategy="epoch",
+            learning_rate=lr,
+            weight_decay=wdecay,
+            push_to_hub=True,
+            report_to="wandb",
+            # run_name=f"{run_name}_i{i}_f{fold}", # name of the W&B run (optional)
+            run_name=run_name, # name of the W&B run (optional)
+            logging_steps=1,   # how often to log to W&B
+            per_device_train_batch_size=per_device_train_batch_size,
+            per_device_eval_batch_size=per_device_eval_batch_size,
+            save_total_limit=1, #!
+            # load_best_model_at_end=True
+            
+        )
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_dataset,
+            eval_dataset=val_dataset,
+            data_collator=data_collator,
+        )
+        trainer.train()
 
-            # model.push_to_hub(model_name)           
-            eval_results = trainer.evaluate()
-            perplexity = math.exp(eval_results['eval_loss'])
-            print(f"Perplexity (Round {i}, Fold {fold + 1}): {perplexity:.2f}") #TODO could e present perplexity in the paper?? 
-            # Store the perplexity score for this fold
-            perplexity_scores.append(perplexity)
-            epoch_count += epoch
-            print('completed epochs: ', epoch_count)
-            if fold==0:
-                tokenizer.push_to_hub(model_name)   # save tokenizer to HF
+        # model.push_to_hub(model_name)           
+        eval_results = trainer.evaluate()
+        perplexity = math.exp(eval_results['eval_loss'])
+        print(f"Perplexity (Round {i}, Fold {fold + 1}): {perplexity:.2f}") #TODO could e present perplexity in the paper?? 
+        # Store the perplexity score for this fold
+        perplexity_scores.append(perplexity)
+        epoch_count += epoch
+        print('completed epochs: ', epoch_count)
+        if fold==0:
+            tokenizer.push_to_hub(model_name)   # save tokenizer to HF
+            wandb.config.update(conf_dict)  #! update the config for wandb
+        wandb.log({'perplexity': perplexity, 'epoch_count': epoch_count})   #!
     model.push_to_hub(model_name)
     # if i==0:
     #     tokenizer.push_to_hub(model_name)   # save tokenizer to HF

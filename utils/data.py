@@ -8,6 +8,7 @@ def make_dict(variables):
     dictionary = {name: value for name, value in frame.f_locals.items() if id(value) in [id(var) for var in variables]}
     return dictionary
 
+eqsplit = '=='
 remove_ing_exception = {'Shaping': 'Shape'}
 
 class LLMDataset:
@@ -66,10 +67,8 @@ class Dataset_template(LLMDataset):
 
 
 class Dataset_Lhs2Rhs(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None, eqsplit='=='):
-        self.eqsplit = eqsplit
+    def __init__(self, data, index=None, te_ratio=0.1, separator='->', cut=None):
         super().__init__(data, index, te_ratio, separator, cut)
-        # self.eqsplit = eqsplit
 
     def get_data_list(self):
         self.data_list = [
@@ -81,7 +80,7 @@ class Dataset_Lhs2Rhs(LLMDataset):
         self.data_dict = {"label": [], "text": []}
         for data_point in self.data_list:
             a = data_point["text"]
-            lhs, rhs = a.split(self.eqsplit)
+            lhs, rhs = a.split(eqsplit)
             if self.cut in rhs:
                 rhs = rhs.split(self.cut)[0]
             self.data_dict["label"].append(lhs+self.separator)
@@ -89,10 +88,8 @@ class Dataset_Lhs2Rhs(LLMDataset):
             
 
 class Dataset_Rhs2Lhs(LLMDataset):
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None, eqsplit='=='):
-        self.eqsplit = eqsplit
+    def __init__(self, data, index=None, te_ratio=0.1, separator='<-', cut=None):
         super().__init__(data, index, te_ratio, separator, cut)
-        # self.eqsplit = eqsplit
 
     def get_data_list(self):
         self.data_list = [
@@ -103,7 +100,7 @@ class Dataset_Rhs2Lhs(LLMDataset):
         self.data_dict = {"label": [], "text": []}
         for data_point in self.data_list:
             a = data_point["text"]
-            lhs, rhs = a.split(self.eqsplit)
+            lhs, rhs = a.split(eqsplit)
             if self.cut in rhs:
                 rhs = rhs.split(self.cut)[0]
             self.data_dict["label"].append(rhs + self.separator)    #!
