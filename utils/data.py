@@ -11,6 +11,27 @@ def make_dict(variables):
 eqsplit = '=='
 remove_ing_exception = {'Shaping': 'Shape'}
 
+def space_separator(target_string: str, separator: str) -> str:
+    # Find the index of the separator in the target string
+    separator = str(separator).strip()
+    index = target_string.find(separator)
+    
+    while index != -1:
+        # Check if there is no space before the separator
+        if index > 0 and target_string[index - 1] != ' ':
+            target_string = target_string[:index] + ' ' + target_string[index:]
+            index += 1  # Adjust index to account for the inserted space
+        
+        # Check if there is no space after the separator
+        index += len(separator)
+        if index < len(target_string) and target_string[index] != ' ':
+            target_string = target_string[:index] + ' ' + target_string[index:]
+        
+        # Find the next occurrence of the separator
+        index = target_string.find(separator, index)
+    
+    return target_string
+
 class LLMDataset:
     def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None):
         self.data = data
@@ -83,8 +104,8 @@ class Dataset_Lhs2Rhs(LLMDataset):
             lhs, rhs = a.split(eqsplit)
             if self.cut in rhs:
                 rhs = rhs.split(self.cut)[0]
-            self.data_dict["label"].append(lhs+self.separator)
-            self.data_dict["text"].append(lhs+self.separator+rhs)
+            self.data_dict["label"].append(space_separator(lhs+self.separator, self.separator))
+            self.data_dict["text"].append(space_separator(lhs+self.separator+rhs, self.separator))
             
 
 class Dataset_Rhs2Lhs(LLMDataset):
@@ -103,8 +124,8 @@ class Dataset_Rhs2Lhs(LLMDataset):
             lhs, rhs = a.split(eqsplit)
             if self.cut in rhs:
                 rhs = rhs.split(self.cut)[0]
-            self.data_dict["label"].append(rhs + self.separator)    #!
-            self.data_dict["text"].append(rhs+self.separator+lhs)
+            self.data_dict["label"].append(space_separator(rhs + self.separator, self.separator))    #!
+            self.data_dict["text"].append(space_separator(rhs+self.separator+lhs, self.separator))
 
 
 class Dataset_Ope2Ceq_simple(LLMDataset):
@@ -138,8 +159,8 @@ class Dataset_Ope2Ceq_simple(LLMDataset):
             if self.cut in eq:
                 eq = eq.split(self.cut)[0]
             prompt = d['target'] + ': ' +  " ".join(protocol)
-            self.data_dict["label"].append(prompt+ self.separator)  #!
-            self.data_dict["text"].append(prompt+ self.separator + eq)
+            self.data_dict["label"].append(space_separator(prompt+ self.separator, self.separator))  #!
+            self.data_dict["text"].append(space_separator(prompt+ self.separator + eq, self.separator))
             
 
 class Dataset_Ceq2Ope_simple(LLMDataset):
@@ -173,8 +194,8 @@ class Dataset_Ceq2Ope_simple(LLMDataset):
                 else: 
                     protocol.append(x)
             protocol = [x.replace('ing', '') for x in protocol]   #!
-            self.data_dict["label"].append(prompt+ self.separator)  #!
-            self.data_dict["text"].append(prompt+ self.separator +" ".join(protocol))
+            self.data_dict["label"].append(space_separator(prompt+ self.separator, self.separator))  #!
+            self.data_dict["text"].append(space_separator(prompt+ self.separator +" ".join(protocol), self.separator))
 
 
 
@@ -198,8 +219,8 @@ class Dataset_Tgt2Ceq(LLMDataset):
             eq = d['eq']
             if self.cut in eq:
                 eq = eq.split(self.cut)[0]
-            self.data_dict["label"].append(prompt+ self.separator)  #!
-            self.data_dict["text"].append(prompt+ self.separator + eq)
+            self.data_dict["label"].append(space_separator(prompt+ self.separator, self.separator))  #!
+            self.data_dict["text"].append(space_separator(prompt+ self.separator + eq, self.separator))
  
 
 def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'value': 50}, 
@@ -241,7 +262,7 @@ def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'va
     if set_length['type']=='add':
         max_length = input_length + int(set_length['value'])
     else: 
-        max_length = input_length*set_length['value']
+        max_length = int(input_length*float(set_length['value']))
     generated_ids = model.generate(**model_inputs, max_length=max_length, repetition_penalty=1.1)
     text = dataset[source][idx]['text']
     # print('text: ', text)

@@ -59,7 +59,7 @@ model0 = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2").to(device
 
 #%%
 # [4] Inference using trained model 
-idx = 10
+idx = 30
 data_source = 'test'  
 out_type='add'  # {'type': 'add', 'value': 50}, {'type': 'mul', 'value': 1.2}
 out_size = min(500, 4.0*len(dataset[data_source][idx]['label'].split(':')[0]))
@@ -87,7 +87,7 @@ print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Sim
 #%%
 # [5] Plot element-wise prediction accuracy.
 tag = 'v1.1'
-num_sample = len(dataset[data_source])
+num_sample = 50    #len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
 lens_tgt, lens_ceq = [], []
 chem_dict = {el:[] for el in chemical_symbols}
@@ -136,28 +136,28 @@ with open(f'./save/{header}_{num_sample}_{tag}.pkl', 'wb') as f:
 from utils.periodic_trends import plotter
 p = plotter(filename, output_filename=f'./save/{header}_{num_sample}_{tag}.html', under_value=0, over_value=1)
 
-fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-ax = axs[0]
-# ax.scatter(lens_tgt, sim_reacs, s=5, color='blue', label='Reactants')
-# ax.scatter(lens_tgt, sim_prods, s=5, color='red', label='Products')
-ax.scatter(lens_tgt, sim_all, s=5, color=good_colors['green'], label='Overall')
-ax.set_xlabel('Wrt target lengths', fontsize=14)
-ax.set_ylabel('Accuracy', fontsize=14)
-# ax.legend()
+# fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+# ax = axs[0]
+# # ax.scatter(lens_tgt, sim_reacs, s=5, color='blue', label='Reactants')
+# # ax.scatter(lens_tgt, sim_prods, s=5, color='red', label='Products')
+# ax.scatter(lens_tgt, sim_all, s=5, color=good_colors['green'], label='Overall')
+# ax.set_xlabel('Wrt target lengths', fontsize=14)
+# ax.set_ylabel('Accuracy', fontsize=14)
+# # ax.legend()
 
-ax = axs[1]
-# ax.scatter(lens_ceq, sim_reacs, s=5, color='blue', label='Reactants')
-# ax.scatter(lens_ceq, sim_prods, s=5, color='red', label='Products')
-ax.scatter(lens_ceq, sim_all, s=5, color=good_colors['green'], label='Overall')
-ax.set_xlabel('Wrt full equation lengths', fontsize=14)
-ax.set_ylabel('Accuracy', fontsize=14)
-# ax.legend()
+# ax = axs[1]
+# # ax.scatter(lens_ceq, sim_reacs, s=5, color='blue', label='Reactants')
+# # ax.scatter(lens_ceq, sim_prods, s=5, color='red', label='Products')
+# ax.scatter(lens_ceq, sim_all, s=5, color=good_colors['green'], label='Overall')
+# ax.set_xlabel('Wrt full equation lengths', fontsize=14)
+# ax.set_ylabel('Accuracy', fontsize=14)
+# # ax.legend()
 
-fig.suptitle(f'{header}_{num_sample}_{tag}', fontsize=16)
-fig.savefig(f'./save/{header}_{num_sample}_{tag}_scatter.png')
+# fig.suptitle(f'{header}_{num_sample}_{tag}', fontsize=16)
+# fig.savefig(f'./save/{header}_{num_sample}_{tag}_scatter.png')
 
-len_data = np.array([lens_tgt, lens_ceq, sim_all]).T
-np.save(f'./save/{header}_{num_sample}_{tag}_len_data.npy', len_data)
+# len_data = np.array([lens_tgt, lens_ceq, sim_all]).T
+# np.save(f'./save/{header}_{num_sample}_{tag}_len_data.npy', len_data)
 
 # save df as csv 
 df.to_csv(f'./save/{header}_{num_sample}_{tag}_df.csv')
