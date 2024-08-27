@@ -116,7 +116,7 @@ class Dataset_Ope2Ceq_simple(LLMDataset):
             {
                 "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
                 "opes": self.data[i]['operations'],
-                'eq': self.data[i]['reaction_string']
+                'eq': self.data[i]['reaction_string'].replace('==', '->')
             }
             for i in self.index
         ]
@@ -151,7 +151,7 @@ class Dataset_Ceq2Ope_simple(LLMDataset):
             {
                 "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
                 "opes": self.data[i]['operations'],
-                'eq': self.data[i]['reaction_string']
+                'eq': self.data[i]['reaction_string'].replace('==', '->')
             }
             for i in self.index
             # Add more dictionaries here...
@@ -186,7 +186,7 @@ class Dataset_Tgt2Ceq(LLMDataset):
         self.data_list = [
             {
                 "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
-                'eq': self.data[i]['reaction_string']
+                'eq': self.data[i]['reaction_string'].replace('==', '->')
             }
             for i in self.index
         ]

@@ -46,12 +46,12 @@ random.seed(seedn)
 sample_ratio = 1
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
-separator='<-'    #TODO: how can we specify it in a smart manner??
+separator='||'    #TODO: how can we specify it in a smart manner??
 cut = ';'
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Rhs2Lhs(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-run_name ='B_dgpt2_v1.1.1'  #TODO put all config part into one place
+dataset = Dataset_Ope2Ceq_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+run_name ='D_dgpt2_v1.1.1'  #TODO put all config part into one place
 hf_model = "distilbert/distilgpt2" 
 model_name = join(hf_usn, run_name) # '/syn_distilgpt2_v2'  #TODO any newer model? 
 tk_model = hf_model
@@ -60,7 +60,7 @@ pad_tokenizer=True
 save_indices = True
 rm_ckpts = True
 
-conf_dict.update(make_dict([run_name, hf_model, model_name, tk_model, load_pretrained, pad_tokenizer, save_indices, rm_ckpts]))
+conf_dict.update(make_dict([run_name, separator, cut, hf_model, model_name, tk_model, load_pretrained, pad_tokenizer, save_indices, rm_ckpts]))
 print(conf_dict)
 #%%
 # load tokenizer

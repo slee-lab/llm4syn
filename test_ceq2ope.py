@@ -9,27 +9,22 @@ import math
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM
+from huggingface_hub import login
 import pickle as pkl
 import matplotlib.pyplot as plt
 import pandas as pd
-seedn=42
-# random.seed(seedn)
+
+from env_config import *
 from utils.data import *
 from utils.metrics import *
 from utils.plot_data import *
-device = 'cuda'
-file_name = os.path.basename(__file__)
-print("File Name:", file_name)
 
-from huggingface_hub import login
-from env_config import *
 login(hf_api_key_w, add_to_git_credential=True)
 
 #%%
 # [1] Load dataset
 random.seed(seedn)
 sample_ratio = 1
-data_path = '/home/rokabe/data2/llm4syn/data/solid-state_dataset_2019-06-27_upd.json'  # path to the inorganic crystal synthesis data (json)
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
 separator='||'    #!
@@ -37,12 +32,10 @@ cut = ';' #!
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
 dataset = Dataset_Ceq2Ope_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset    #!
-run_name ='ope_simple_dgpt_v1.2'   #!
+run_name ='D_dgpt2_v1.1.1' 
 model_name = join(hf_usn, run_name) 
 tk_model = model_name # set tokenizer model loaded from HF (usually same as hf_model)
-load_pretrained=False   # If True, load the model from 'model_name'. Else, load the pre-trained model from hf_model. 
 pad_tokenizer=True
-save_indices = True
 
 #%%
 # [2] load tokenizer
@@ -89,12 +82,12 @@ text_gt = text_gt.replace('||', '')
 text_pred = eq_pred.replace('||', '')
 print('gtruth: ', text_gt) 
 print('answer: ', text_pred)
-# similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='==')#['=='])#, separator, '||', '=='])
-# print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
+similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='==')#['=='])#, separator, '||', '=='])
+print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
 
 #%%
 # [5] Plot element-wise prediction accuracy.
-tag = 'v2.3'
+tag = 'v1.1'
 num_sample = len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
 lens_ceq, lens_opes = [], []
@@ -116,15 +109,14 @@ for idx in tqdm(range(num_sample), desc="Processing"):
         len_ceq, len_opes = len(ceq_gt), len(opes_gt.split(' '))
         lens_ceq.append(len_ceq)
         lens_opes.append(len_opes)
-        # if remove_header:
-        #     # eq_pred = eq_pred[len_label:]
-        #     text_gt = text_gt[len_label:]
-        # similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='==')
-        # sim_reacs.append(similarity_reactants)
-        # sim_prods.append(similarity_products)
-        # sim_all.append(overall_similarity)
+        if remove_header:
+            # eq_pred = eq_pred[len_label:]
+            text_gt = text_gt[len_label:]
+        similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='==')
+        sim_reacs.append(similarity_reactants)
+        sim_prods.append(similarity_products)
+        sim_all.append(overall_similarity)
         label_elements = find_atomic_species(label)
-        # df = df._append({'idx': idx, 'prompt': label, 'gt': text_gt, 'ceq_gt': ceq_gt, 'opes_gt': opes_gt, 'pred': text_pred}, ignore_index=True)
         df = df._append({'idx': idx, 'prompt': label, 'gt': text_gt, 'ceq_gt': ceq_gt, 'opes_gt': opes_gt, 'pred': text_pred}, ignore_index=True)
         for el in label_elements:
             chem_dict[el].append(overall_similarity)
