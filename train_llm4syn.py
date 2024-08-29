@@ -15,6 +15,7 @@ import wandb
 from env_config import * 
 from utils.data import *
 from utils.model import *
+from utils.catalog import *
 file_name = os.path.basename(__file__)
 # use f-string for all print statements
 print(f'{file_name=}')
@@ -26,6 +27,10 @@ os.environ["WANDB_PROJECT"] = wandb_project
 # os.environ["WANDB_LOG_MODEL"] = "checkpoint" # log all model checkpoints
 
 # hparamm for training    #TODO save the config for wandb??
+task = 'lhsope2rhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
+model_tag = 'dgpt2'
+ver_tag = 'v1.1.1'
+
 overwrite_output_dir=True
 nepochs = 200    # total eppochs for training 
 num_folds = 10
@@ -34,33 +39,34 @@ lr=2e-5
 wdecay=0.01
 per_device_train_batch_size = 4  # default: 8
 per_device_eval_batch_size = per_device_train_batch_size  # default: 8
-
-conf_dict = make_dict([
-    file_name, nepochs, num_folds, ep_per_fold, lr, wdecay, 
-    per_device_train_batch_size, per_device_eval_batch_size
-])
-
-#%%
-# load data
-random.seed(seedn)
-sample_ratio = 1
-data = json.load(open(data_path, 'r'))
-num_sample = int(len(data)*sample_ratio)
-separator='||'    #TODO: how can we specify it in a smart manner??
-cut = ';'
-rand_indices = random.sample(range(len(data)), num_sample)
-data1 = [data[i] for i in rand_indices]
-dataset = Dataset_Ope2Ceq_simple(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
-run_name ='D_dgpt2_v1.1.1'  #TODO put all config part into one place
-hf_model = "distilbert/distilgpt2" 
-model_name = join(hf_usn, run_name) # '/syn_distilgpt2_v2'  #TODO any newer model? 
-tk_model = hf_model
 load_pretrained=False 
 pad_tokenizer=True
 save_indices = True
 rm_ckpts = True
 
-conf_dict.update(make_dict([run_name, separator, cut, hf_model, model_name, tk_model, load_pretrained, pad_tokenizer, save_indices, rm_ckpts]))
+
+#%%
+# load data
+random.seed(seedn)
+sample_ratio = 1
+separator, cut = separator_dict[task], ';'
+data = json.load(open(data_path, 'r'))
+num_sample = int(len(data)*sample_ratio)
+rand_indices = random.sample(range(len(data)), num_sample)
+data1 = [data[i] for i in rand_indices]
+dataset = Dataset_LLM4SYN(data1, index=None, te_ratio=0.1, separator=separator, cut=cut, task=task).dataset 
+run_name = f'{task}_{model_tag}_{ver_tag}'  #TODO put all config part into one place
+model_name = join(hf_usn, run_name)   #TODO any newer model? 
+hf_model = gpt_model_dict[model_tag] 
+tk_model = hf_model
+
+
+conf_dict = make_dict([
+    file_name, separator, cut, nepochs, num_folds, ep_per_fold, lr, wdecay, 
+    per_device_train_batch_size, per_device_eval_batch_size,
+    run_name, hf_model, model_name, tk_model, load_pretrained, 
+    pad_tokenizer, save_indices, rm_ckpts
+])
 print(conf_dict)
 #%%
 # load tokenizer
