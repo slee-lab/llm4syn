@@ -14,7 +14,7 @@ from huggingface_hub import login
 import wandb
 from env_config import * 
 from utils.data import *
-from utils.model import *
+from utils.model_utils import *
 from utils.catalog import *
 file_name = os.path.basename(__file__)
 # use f-string for all print statements
@@ -27,12 +27,12 @@ os.environ["WANDB_PROJECT"] = wandb_project
 # os.environ["WANDB_LOG_MODEL"] = "checkpoint" # log all model checkpoints
 
 # hparamm for training    #TODO save the config for wandb??
-task = 'lhsope2rhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
+task = 'lhs2rhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
 model_tag = 'dgpt2'
-ver_tag = 'v1.1.1'
+ver_tag = 'v1.1.0'
 
 overwrite_output_dir=True
-nepochs = 200    # total eppochs for training 
+nepochs = 100    # total eppochs for training 
 num_folds = 10
 ep_per_fold = nepochs//num_folds
 lr=2e-5
@@ -105,26 +105,23 @@ if load_pretrained:
 else:      
     model = AutoModelForCausalLM.from_pretrained(hf_model).to(device)   #!
 model0 = AutoModelForCausalLM.from_pretrained(hf_model).to(device)
+print(model.config) 
 
 #%% 
 # Inference using model before trainign before training #TODOdelete this section in the end?? 
 idx = 82
 data_source = 'test'
-out_type='add'  #TODO we will parse this section from the config in the end
-out_size = 50
-remove_header=False
-print(idx)
-print('<<our prediction (before training)>>')
-output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size},  #TODO: modify function for easier optimization. 
-                     separator=separator, remove_header=remove_header, source=data_source, device=device)
-print('gtruth: ', output['text']) 
-print('answer: ', output['answer'])
+print(f'[{idx}] <<our prediction (before training)>>')
+out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
+                  separator=separator, source=data_source ,device='cuda')
+print('gt_text: ', out_dict['gt_text']) 
+print('out_text: ', out_dict['out_text'])
 
-print('<<Without training>>')
-output0=show_one_test(model0, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
-                      separator=separator, remove_header=remove_header, source=data_source, device=device)
-print('gtruth: ', output0['text']) 
-print('answer: ', output0['answer'])
+print(f'[{idx}] <<our prediction (after training)>>')
+out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
+                  separator=separator, source=data_source ,device='cuda')
+print('gt_text: ', out_dict['gt_text']) 
+print('out_text: ', out_dict['out_text'])
 
 #%%
 # Set up K-fold cross valudation
@@ -164,7 +161,7 @@ for i, ep_list in enumerate(ep_lists):
             # load_best_model_at_end=True
             
         )
-        trainer = Trainer(
+        trainer = CustomTrainer(    #! CustomTrainer instead of Trainer
             model=model,
             args=training_args,
             train_dataset=train_dataset,
@@ -205,12 +202,16 @@ if save_indices:
 print('test after training')
 idx = 9
 data_source = 'test'
-print(idx)
-print('<<our prediction (before training)>>')
-output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
-                     separator=separator, remove_header=remove_header, source=data_source, device=device)
-print('<<Without training>>')
-output0=show_one_test(model0, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
-                      separator=separator, remove_header=remove_header, source=data_source, device=device)
+print(f'[{idx}] <<our prediction (before training)>>')
+out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
+                  separator=separator, source=data_source ,device='cuda')
+print('gt_text: ', out_dict['gt_text']) 
+print('out_text: ', out_dict['out_text'])
+
+print(f'[{idx}] <<our prediction (after training)>>')
+out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
+                  separator=separator, source=data_source ,device='cuda')
+print('gt_text: ', out_dict['gt_text']) 
+print('out_text: ', out_dict['out_text'])
 
 # %%

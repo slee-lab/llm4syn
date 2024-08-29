@@ -88,7 +88,7 @@ class Dataset_template(LLMDataset):
         self.data_dict = {"label": [], "text": []}
 
 
-class Dataset_Lhs2Rhs(LLMDataset):
+class Dataset_Lhs2Rhs(LLMDataset):  #TODO: remove in the end
     def __init__(self, data, index=None, te_ratio=0.1, separator='->', cut=None, task=None):
         super().__init__(data, index, te_ratio, separator, cut, task)
 
@@ -109,7 +109,7 @@ class Dataset_Lhs2Rhs(LLMDataset):
             self.data_dict["text"].append(space_separator(lhs+self.separator+rhs, self.separator))
             
 
-class Dataset_Rhs2Lhs(LLMDataset):
+class Dataset_Rhs2Lhs(LLMDataset):  #TODO: remove in the end
     def __init__(self, data, index=None, te_ratio=0.1, separator='<-', cut=None, task=None):
         super().__init__(data, index, te_ratio, separator, cut, task)
 
@@ -129,7 +129,7 @@ class Dataset_Rhs2Lhs(LLMDataset):
             self.data_dict["text"].append(space_separator(rhs+self.separator+lhs, self.separator))
 
 
-class Dataset_Ope2Ceq_simple(LLMDataset):
+class Dataset_Ope2Ceq_simple(LLMDataset):  #TODO: remove in the end
     def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, task=None):
         super().__init__(data, index, te_ratio, separator, cut, task)
 
@@ -164,7 +164,7 @@ class Dataset_Ope2Ceq_simple(LLMDataset):
             self.data_dict["text"].append(space_separator(prompt+ self.separator + eq, self.separator))
             
 
-class Dataset_Ceq2Ope_simple(LLMDataset):
+class Dataset_Ceq2Ope_simple(LLMDataset):  #TODO: remove in the end
     def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, task=None):
         super().__init__(data, index, te_ratio, separator, cut, task)
 
@@ -200,7 +200,7 @@ class Dataset_Ceq2Ope_simple(LLMDataset):
 
 
 
-class Dataset_Tgt2Ceq(LLMDataset):
+class Dataset_Tgt2Ceq(LLMDataset):  #TODO: remove in the end
     def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, task=None):
         super().__init__(data, index, te_ratio, separator, cut, task)
 
@@ -225,7 +225,7 @@ class Dataset_Tgt2Ceq(LLMDataset):
 
 
 
-class Dataset_LHSOPE2RHS(LLMDataset):
+class Dataset_LHSOPE2RHS(LLMDataset):  #TODO: remove in the end
     def __init__(self, data, index=None, te_ratio=0.1, separator='->', cut=None, task=None):
         super().__init__(data, index, te_ratio, separator, cut, task)
 
@@ -261,7 +261,7 @@ class Dataset_LHSOPE2RHS(LLMDataset):
             self.data_dict["text"].append(space_separator(prompt+ self.separator + rhs, self.separator))
             
 arrow_l2r = '->'
-separator_o = ', '
+separator_o = ': '
 
 def label_text(task='lhs2rhs', separator_o=separator_o, lhs=None, rhs=None, tgt=None, eq=None, ope=None, separator='->'):
     if task == 'lhs2rhs':
@@ -322,7 +322,7 @@ class Dataset_LLM4SYN(LLMDataset):   # TODO: combine all the dataset class into 
 
 
 def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'value': 50}, 
-                  separator=None, remove_header=True, cut=None, source='test',device='cuda'):
+                  separator=None, remove_header=True, cut=None, source='test',device='cuda'):  #TODO: remove in the end
     """_summary_
 
     Args:
@@ -384,6 +384,58 @@ def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'va
     # print('gtruth: ', gt_answer) 
     # print('answer: ', output)
     return {'answer': output, 'text': text, 'label': prompt}
+
+
+def one_result(model, tokenizer, dataset, idx, set_length={'type': 'add', 'value': 50}, 
+                  separator=None, source='test',device='cuda'): 
+    """_summary_
+
+    Args:
+        model (_type_): _description_
+        dataset (_type_): _description_
+        idx (_type_): _description_
+        tokenizer (_type_): _description_
+        set_length (dict, optional): _description_. Defaults to {'type': 'add', 'value': 50}. Otherwise {'type': 'mul', 'value': 1.2}.
+        separator (_type_, optional): _description_. Defaults to None.
+        remove_header (bool, optional): _description_. Defaults to True.
+        cut (_type_, optional): _description_. Defaults to None. Set ';' if you want cut off the output after ';'. 
+        source (str, optional): _description_. Defaults to 'test'.
+        device (str, optional): _description_. Defaults to 'cuda'.
+
+    Returns:
+        _type_: _description_
+    """
+    label = dataset[source][idx]['label']
+    text = dataset[source][idx]['text']
+    # remove separator if it is not None from label
+    label_wo_sep = label.replace(separator, '')
+    source = label_wo_sep.split(separator_o)[0]
+    
+    tok_source = tokenizer(source, padding=True, truncation=True, return_tensors="pt")
+    tok_source = {key: tensor.to(device) for key, tensor in tok_source.items()}
+    tok_source_len = tok_source['input_ids'].shape[-1]
+    
+    tok_label = tokenizer(label, padding=True, truncation=True, return_tensors="pt")
+    tok_label = {key: tensor.to(device) for key, tensor in tok_label.items()}
+    tok_label_len = tok_label['input_ids'].shape[-1]
+    
+    if set_length['type']=='add':
+        max_length = tok_label_len + int(set_length['value'])
+    else: 
+        max_length = tok_label_len + int(tok_source_len*float(set_length['value']))   #TODO: multiply the length of input excluding the OPE part (split by ':' and take the first part)
+    
+    print('tok_source_len, tok_label_len, max_length: ', tok_source_len, tok_label_len, max_length)
+    generated_ids = model.generate(**tok_label, max_length=max_length, repetition_penalty=1.1)
+    # print('text: ', text)
+    tok_text = tokenizer(text)
+    gt_text = tokenizer.decode(tok_text["input_ids"])
+    out_text = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
+    # print('gtruth: ', gt_answer) 
+    # print('answer: ', output)
+    return {'out_text': out_text, 'gt_text': gt_text, 'label': label}
+
+
 
 
 def preprocess_function(tokenizer, function, examples):

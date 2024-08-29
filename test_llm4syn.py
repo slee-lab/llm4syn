@@ -14,7 +14,6 @@ from huggingface_hub import login
 import wandb
 from env_config import * 
 from utils.data import *
-from utils.model import *
 from utils.catalog import *
 file_name = os.path.basename(__file__)
 
