@@ -87,7 +87,7 @@ print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Sim
 #%%
 # [5] Plot element-wise prediction accuracy.
 tag = 'v1.1'
-num_sample = 50    #len(dataset[data_source])
+num_sample = 100    #len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
 lens_tgt, lens_ceq = [], []
 chem_dict = {el:[] for el in chemical_symbols}
@@ -101,7 +101,7 @@ for idx in tqdm(range(num_sample), desc="Processing"):
                         separator=separator, remove_header=remove_header, cut=post_cut, source=data_source, device=device)
         label = output['label']
         len_label = len(label)
-        eq_pred = output['answer']
+        eq_pred = output['answer'].replace('||', '')
         eq_gt = output['text']
         target, ceq = eq_gt.split(separator)[0].split(':')[0], eq_gt.split(separator)[1]
         len_tgt, len_ceq = len(target), len(ceq)
@@ -110,6 +110,9 @@ for idx in tqdm(range(num_sample), desc="Processing"):
         if remove_header:
             # eq_pred = eq_pred[len_label:]
             eq_gt = eq_gt[len_label:]
+        print(f'[{idx}] target: ', target)
+        print(f'[{idx}] gt: ', eq_gt)
+        print(f'[{idx}] pred: ', eq_pred)
         similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='->')
         sim_reacs.append(similarity_reactants)
         sim_prods.append(similarity_products)
