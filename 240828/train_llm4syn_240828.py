@@ -14,9 +14,7 @@ from huggingface_hub import login
 import wandb
 from env_config import * 
 from utils.data import *
-from utils.model_utils import *
-from utils.metrics import *
-from utils.catalog import *
+from utils.model import *
 file_name = os.path.basename(__file__)
 # use f-string for all print statements
 print(f'{file_name=}')
@@ -28,46 +26,41 @@ os.environ["WANDB_PROJECT"] = wandb_project
 # os.environ["WANDB_LOG_MODEL"] = "checkpoint" # log all model checkpoints
 
 # hparamm for training    #TODO save the config for wandb??
-task = 'lhsope2rhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
-model_tag = 'dgpt2'
-ver_tag = 'v1.1.1'
-
 overwrite_output_dir=True
-nepochs = 100    # total eppochs for training 
+nepochs = 200    # total eppochs for training 
 num_folds = 10
 ep_per_fold = nepochs//num_folds
 lr=2e-5
 wdecay=0.01
 per_device_train_batch_size = 4  # default: 8
 per_device_eval_batch_size = per_device_train_batch_size  # default: 8
-load_pretrained=False 
-pad_tokenizer=True
-save_indices = True
-rm_ckpts = True
 
+conf_dict = make_dict([
+    file_name, nepochs, num_folds, ep_per_fold, lr, wdecay, 
+    per_device_train_batch_size, per_device_eval_batch_size
+])
 
 #%%
 # load data
 random.seed(seedn)
 sample_ratio = 1
-separator, cut = separator_dict[task], ';'
 data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
+separator='->'    #TODO: how can we specify it in a smart manner??
+cut = ';'
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_LLM4SYN(data1, index=None, te_ratio=0.1, separator=separator, cut=cut, task=task).dataset 
-run_name = f'{task}_{model_tag}_{ver_tag}'  #TODO put all config part into one place
-model_name = join(hf_usn, run_name)   #TODO any newer model? 
-hf_model = gpt_model_dict[model_tag] 
+dataset = Dataset_LHSOPE2RHS(data1, index=None, te_ratio=0.1, separator=separator, cut=cut).dataset 
+run_name ='E_dgpt2_v1.1.1'  #TODO put all config part into one place
+hf_model = "distilbert/distilgpt2" 
+model_name = join(hf_usn, run_name) # '/syn_distilgpt2_v2'  #TODO any newer model? 
 tk_model = hf_model
+load_pretrained=False 
+pad_tokenizer=True
+save_indices = True
+rm_ckpts = True
 
-
-conf_dict = make_dict([
-    file_name, separator, cut, nepochs, num_folds, ep_per_fold, lr, wdecay, 
-    per_device_train_batch_size, per_device_eval_batch_size,
-    run_name, hf_model, model_name, tk_model, load_pretrained, 
-    pad_tokenizer, save_indices, rm_ckpts
-])
+conf_dict.update(make_dict([run_name, separator, cut, hf_model, model_name, tk_model, load_pretrained, pad_tokenizer, save_indices, rm_ckpts]))
 print(conf_dict)
 #%%
 # load tokenizer
@@ -106,32 +99,26 @@ if load_pretrained:
 else:      
     model = AutoModelForCausalLM.from_pretrained(hf_model).to(device)   #!
 model0 = AutoModelForCausalLM.from_pretrained(hf_model).to(device)
-print(model.config) 
 
 #%% 
 # Inference using model before trainign before training #TODOdelete this section in the end?? 
 idx = 82
 data_source = 'test'
-print(f'[{idx}] <<our prediction (before training)>>')
-out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
-                  separator=separator, source=data_source ,device='cuda')
-print('gt_text: ', out_dict['gt_text']) 
-print('out_text: ', out_dict['out_text'])
+out_type='add'  #TODO we will parse this section from the config in the end
+out_size = 50
+remove_header=False
+print(idx)
+print('<<our prediction (before training)>>')
+output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size},  #TODO: modify function for easier optimization. 
+                     separator=separator, remove_header=remove_header, source=data_source, device=device)
+print('gtruth: ', output['text']) 
+print('answer: ', output['answer'])
 
-print(f'[{idx}] <<our prediction (after training)>>')
-out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
-                separator=separator, source=data_source ,device='cuda')
-gt_text = out_dict['gt_text']
-pr_text = out_dict['out_text']
-print('gt_text: ', gt_text) 
-print('pr_text: ', pr_text)
-gt_eq = gt_text.split(separator)[-1][1:]
-pr_eq = pr_text.split(separator)[-1][1:]
-
-print('eq_gt: ', gt_eq)
-print('eq_pred: ', pr_eq)
-similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split='->') 
-print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
+print('<<Without training>>')
+output0=show_one_test(model0, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
+                      separator=separator, remove_header=remove_header, source=data_source, device=device)
+print('gtruth: ', output0['text']) 
+print('answer: ', output0['answer'])
 
 #%%
 # Set up K-fold cross valudation
@@ -171,7 +158,7 @@ for i, ep_list in enumerate(ep_lists):
             # load_best_model_at_end=True
             
         )
-        trainer = Trainer(    #! CustomTrainer instead of Trainer
+        trainer = Trainer(
             model=model,
             args=training_args,
             train_dataset=train_dataset,
@@ -182,7 +169,6 @@ for i, ep_list in enumerate(ep_lists):
 
         # model.push_to_hub(model_name)           
         eval_results = trainer.evaluate()
-        print('eval_results: ', eval_results)
         perplexity = math.exp(eval_results['eval_loss'])
         print(f"Perplexity (Round {i}, Fold {fold + 1}): {perplexity:.2f}") #TODO could e present perplexity in the paper?? 
         # Store the perplexity score for this fold
@@ -213,16 +199,12 @@ if save_indices:
 print('test after training')
 idx = 9
 data_source = 'test'
-print(f'[{idx}] <<our prediction (before training)>>')
-out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
-                  separator=separator, source=data_source ,device='cuda')
-print('gt_text: ', out_dict['gt_text']) 
-print('out_text: ', out_dict['out_text'])
-
-print(f'[{idx}] <<our prediction (after training)>>')
-out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
-                  separator=separator, source=data_source ,device='cuda')
-print('gt_text: ', out_dict['gt_text']) 
-print('out_text: ', out_dict['out_text'])
+print(idx)
+print('<<our prediction (before training)>>')
+output=show_one_test(model, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
+                     separator=separator, remove_header=remove_header, source=data_source, device=device)
+print('<<Without training>>')
+output0=show_one_test(model0, dataset, idx, tokenizer, set_length={'type': out_type, 'value': out_size}, 
+                      separator=separator, remove_header=remove_header, source=data_source, device=device)
 
 # %%

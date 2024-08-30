@@ -88,177 +88,42 @@ class Dataset_template(LLMDataset):
         self.data_dict = {"label": [], "text": []}
 
 
-class Dataset_Lhs2Rhs(LLMDataset):  #TODO: remove in the end
-    def __init__(self, data, index=None, te_ratio=0.1, separator='->', cut=None, task=None):
-        super().__init__(data, index, te_ratio, separator, cut, task)
+           
 
-    def get_data_list(self):
-        self.data_list = [
-            {"label": self.data[i]['targets_string'][0] , "text": self.data[i]['reaction_string']} for i in self.index
-            # Add more dictionaries here...
-        ]
+# class Dataset_Ceq2Ope_simple(LLMDataset):  #TODO: remove in the end
+#     def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, task=None):
+#         super().__init__(data, index, te_ratio, separator, cut, task)
+
+#     def get_data_list(self):
+#         self.data_list = [
+#             {
+#                 "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
+#                 "opes": self.data[i]['operations'],
+#                 'eq': self.data[i]['reaction_string'].replace('==', '->')
+#             }
+#             for i in self.index
+#             # Add more dictionaries here...
+#         ]
         
-    def get_data_dict(self):
-        self.data_dict = {"label": [], "text": []}
-        for data_point in self.data_list:
-            a = data_point["text"]
-            lhs, rhs = a.split(eqsplit)
-            if self.cut in rhs:
-                rhs = rhs.split(self.cut)[0]
-            self.data_dict["label"].append(space_separator(lhs+self.separator, self.separator))
-            self.data_dict["text"].append(space_separator(lhs+self.separator+rhs, self.separator))
-            
+#     def get_data_dict(self):
+#         self.data_dict = {"label": [], "text": []}
+#         for d in self.data_list:
+#             eq = d['eq']
+#             if self.cut in eq:
+#                 eq = eq.split(self.cut)[0]
+#             prompt = eq
+#             protocol = [d_['type'] for d_ in d['opes']] 
+#             protocol_ = [x.replace('Operation', '') for x in protocol]   #!
+#             protocol = []
+#             for x in protocol_:
+#                 if x in remove_ing_exception.keys():
+#                     protocol.append(x.replace(x, remove_ing_exception[x]))
+#                 else: 
+#                     protocol.append(x)
+#             protocol = [x.replace('ing', '') for x in protocol]   #!
+#             self.data_dict["label"].append(space_separator(prompt+ self.separator, self.separator))  #!
+#             self.data_dict["text"].append(space_separator(prompt+ self.separator +" ".join(protocol), self.separator))
 
-class Dataset_Rhs2Lhs(LLMDataset):  #TODO: remove in the end
-    def __init__(self, data, index=None, te_ratio=0.1, separator='<-', cut=None, task=None):
-        super().__init__(data, index, te_ratio, separator, cut, task)
-
-    def get_data_list(self):
-        self.data_list = [
-            {"label": self.data[i]['targets_string'][0] , "text": self.data[i]['reaction_string']} for i in self.index
-            # Add more dictionaries here...
-        ]
-    def get_data_dict(self):
-        self.data_dict = {"label": [], "text": []}
-        for data_point in self.data_list:
-            a = data_point["text"]
-            lhs, rhs = a.split(eqsplit)
-            if self.cut in rhs:
-                rhs = rhs.split(self.cut)[0]
-            self.data_dict["label"].append(space_separator(rhs + self.separator, self.separator))    #!
-            self.data_dict["text"].append(space_separator(rhs+self.separator+lhs, self.separator))
-
-
-class Dataset_Ope2Ceq_simple(LLMDataset):  #TODO: remove in the end
-    def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, task=None):
-        super().__init__(data, index, te_ratio, separator, cut, task)
-
-    def get_data_list(self):
-        self.data_list = [
-            {
-                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
-                "opes": self.data[i]['operations'],
-                'eq': self.data[i]['reaction_string'].replace('==', '->')
-            }
-            for i in self.index
-        ]
-        
-    def get_data_dict(self):
-        self.data_dict = {"label": [], "text": []}
-        for h, d in enumerate(self.data_list):
-            protocol = [d_['type'] for d_ in d['opes']] 
-            protocol_ = [x.replace('Operation', '') for x in protocol]   #!
-            protocol = []
-            for x in protocol_:
-                if x in remove_ing_exception.keys():
-                    protocol.append(x.replace(x, remove_ing_exception[x]))
-                else: 
-                    protocol.append(x)
-            protocol = [x.replace('ing', '') for x in protocol]   #!
-                # print([h, i], ope, op)
-            eq = d['eq']
-            if self.cut in eq:
-                eq = eq.split(self.cut)[0]
-            prompt = d['target'] + ': ' +  " ".join(protocol)
-            self.data_dict["label"].append(space_separator(prompt+ self.separator, self.separator))  #!
-            self.data_dict["text"].append(space_separator(prompt+ self.separator + eq, self.separator))
-            
-
-class Dataset_Ceq2Ope_simple(LLMDataset):  #TODO: remove in the end
-    def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, task=None):
-        super().__init__(data, index, te_ratio, separator, cut, task)
-
-    def get_data_list(self):
-        self.data_list = [
-            {
-                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
-                "opes": self.data[i]['operations'],
-                'eq': self.data[i]['reaction_string'].replace('==', '->')
-            }
-            for i in self.index
-            # Add more dictionaries here...
-        ]
-        
-    def get_data_dict(self):
-        self.data_dict = {"label": [], "text": []}
-        for d in self.data_list:
-            eq = d['eq']
-            if self.cut in eq:
-                eq = eq.split(self.cut)[0]
-            prompt = eq
-            protocol = [d_['type'] for d_ in d['opes']] 
-            protocol_ = [x.replace('Operation', '') for x in protocol]   #!
-            protocol = []
-            for x in protocol_:
-                if x in remove_ing_exception.keys():
-                    protocol.append(x.replace(x, remove_ing_exception[x]))
-                else: 
-                    protocol.append(x)
-            protocol = [x.replace('ing', '') for x in protocol]   #!
-            self.data_dict["label"].append(space_separator(prompt+ self.separator, self.separator))  #!
-            self.data_dict["text"].append(space_separator(prompt+ self.separator +" ".join(protocol), self.separator))
-
-
-
-class Dataset_Tgt2Ceq(LLMDataset):  #TODO: remove in the end
-    def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, task=None):
-        super().__init__(data, index, te_ratio, separator, cut, task)
-
-    def get_data_list(self):
-        self.data_list = [
-            {
-                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
-                'eq': self.data[i]['reaction_string'].replace('==', '->')
-            }
-            for i in self.index
-        ]
-        
-    def get_data_dict(self):
-        self.data_dict = {"label": [], "text": []}
-        for h, d in enumerate(self.data_list):
-            prompt = d['target']
-            eq = d['eq']
-            if self.cut in eq:
-                eq = eq.split(self.cut)[0]
-            self.data_dict["label"].append(space_separator(prompt+ self.separator, self.separator))  #!
-            self.data_dict["text"].append(space_separator(prompt+ self.separator + eq, self.separator))
-
-
-
-class Dataset_LHSOPE2RHS(LLMDataset):  #TODO: remove in the end
-    def __init__(self, data, index=None, te_ratio=0.1, separator='->', cut=None, task=None):
-        super().__init__(data, index, te_ratio, separator, cut, task)
-
-    def get_data_list(self):
-        self.data_list = [
-            {
-                "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
-                "opes": self.data[i]['operations'],
-                'eq': self.data[i]['reaction_string'].replace('==', '->')
-            }
-            for i in self.index
-        ]
-        
-    def get_data_dict(self):
-        self.data_dict = {"label": [], "text": []}
-        for h, d in enumerate(self.data_list):
-            protocol = [d_['type'] for d_ in d['opes']] 
-            protocol_ = [x.replace('Operation', '') for x in protocol]   #!
-            protocol = []
-            for x in protocol_:
-                if x in remove_ing_exception.keys():
-                    protocol.append(x.replace(x, remove_ing_exception[x]))
-                else: 
-                    protocol.append(x)
-            protocol = [x.replace('ing', '') for x in protocol]   #!
-                # print([h, i], ope, op)
-            eq = d['eq']
-            if self.cut in eq:
-                eq = eq.split(self.cut)[0]
-            lhs,rhs = eq.split('->')
-            prompt = lhs + ': ' +  " ".join(protocol)
-            self.data_dict["label"].append(space_separator(prompt+ self.separator, self.separator))  #!
-            self.data_dict["text"].append(space_separator(prompt+ self.separator + rhs, self.separator))
             
 arrow_l2r = '->'
 separator_o = ': '
@@ -320,70 +185,6 @@ class Dataset_LLM4SYN(LLMDataset):   # TODO: combine all the dataset class into 
             self.data_dict["label"].append(label)
             self.data_dict["text"].append(text)
 
-
-def show_one_test(model, dataset, idx, tokenizer, set_length={'type': 'add', 'value': 50}, 
-                  separator=None, remove_header=True, cut=None, source='test',device='cuda'):  #TODO: remove in the end
-    """_summary_
-
-    Args:
-        model (_type_): _description_
-        dataset (_type_): _description_
-        idx (_type_): _description_
-        tokenizer (_type_): _description_
-        set_length (dict, optional): _description_. Defaults to {'type': 'add', 'value': 50}. Otherwise {'type': 'mul', 'value': 1.2}.
-        separator (_type_, optional): _description_. Defaults to None.
-        remove_header (bool, optional): _description_. Defaults to True.
-        cut (_type_, optional): _description_. Defaults to None. Set ';' if you want cut off the output after ';'. 
-        source (str, optional): _description_. Defaults to 'test'.
-        device (str, optional): _description_. Defaults to 'cuda'.
-
-    Returns:
-        _type_: _description_
-    """
-    given = dataset[source][idx]['label']
-    if separator is not None:
-        separator=str(separator)
-        sep_inputs = tokenizer(separator, padding=True, truncation=True, return_tensors="pt")
-        sep_inputs = {key: tensor.to(device) for key, tensor in sep_inputs.items()}
-        len_sep = sep_inputs['input_ids'].shape[-1]   #len(separator)
-        if given.endswith(separator):
-            prompt = given
-        else: 
-            prompt = given + separator
-    else: 
-        separator=''
-        len_sep = 0
-        prompt = given
-    model_inputs = tokenizer(prompt, padding=True, truncation=True, return_tensors="pt")
-    model_inputs = {key: tensor.to(device) for key, tensor in model_inputs.items()}
-    input_length = model_inputs['input_ids'].shape[-1]
-    if set_length['type']=='add':
-        max_length = input_length + int(set_length['value'])
-    else: 
-        max_length = int(input_length*float(set_length['value']))   #TODO: multiply the length of input excluding the OPE part (split by ':' and take the first part)
-    generated_ids = model.generate(**model_inputs, max_length=max_length, repetition_penalty=1.1)
-    text = dataset[source][idx]['text']
-    # print('text: ', text)
-    encoded_text = tokenizer(text)
-    if remove_header:
-        gt_answer = tokenizer.decode(encoded_text["input_ids"][max(input_length-1, 0):])
-        output = tokenizer.batch_decode(generated_ids[:, max(input_length-1, 0):], skip_special_tokens=True)[0]
-        if cut is not None: #!
-            gt_answer = gt_answer.split(cut)[0]
-            output = output.split(cut)[0]
-    else: 
-        gt_answer = tokenizer.decode(encoded_text["input_ids"])
-        output = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        if cut is not None: 
-            gt_answer_cut = gt_answer.split(cut)[0]
-            if len(gt_answer_cut) >= len(prompt):
-                gt_answer = gt_answer_cut
-            output_cut = output.split(cut)[0]
-            if len(output_cut) >= len(prompt):
-                output = output_cut
-    # print('gtruth: ', gt_answer) 
-    # print('answer: ', output)
-    return {'answer': output, 'text': text, 'label': prompt}
 
 
 def one_result(model, tokenizer, dataset, idx, set_length={'type': 'add', 'value': 50}, 

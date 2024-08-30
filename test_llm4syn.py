@@ -3,6 +3,8 @@ import os
 from os.path import join
 import numpy as np
 import torch
+import pandas as pd
+import pickle as pkl
 import json
 import random
 import math
@@ -14,6 +16,7 @@ from huggingface_hub import login
 import wandb
 from env_config import * 
 from utils.data import *
+from utils.metrics import *
 from utils.catalog import *
 file_name = os.path.basename(__file__)
 
@@ -63,27 +66,32 @@ model0 = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2").to(device
 
 #%%
 # [4] Inference using trained model 
-idx = 30
+idx = 3
 data_source = 'test'  
-remove_header=True
-post_cut = ';'
-print(f'[{idx}] <<our prediction>>')
-output=show_one_test(model, dataset, idx, tokenizer, set_length=out_conf_dict[task], 
-                     separator=separator, remove_header=remove_header, cut=post_cut, source=data_source, device=device)
+print(f'[{idx}] <<our prediction (before training)>>')
+out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
+                  separator=separator, source=data_source ,device='cuda')
+gt_text = out_dict['gt_text']
+pr_text = out_dict['out_text']
+print('gt_text: ', gt_text) 
+print('pr_text: ', pr_text)
 
-label = output['label']
-len_label = len(label)
-eq_pred = output['answer']
-text_gt = output['text']
-if remove_header:
-    # eq_pred = eq_pred[len_label:]
-    text_gt = text_gt[len_label:]
-text_gt = text_gt.replace('||', '')
-text_pred = eq_pred.replace('||', '')
-print('gtruth: ', text_gt) 
-print('answer: ', text_pred)
-similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='>') 
+print(f'[{idx}] <<our prediction (after training)>>')
+out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
+                separator=separator, source=data_source ,device='cuda')
+gt_text = out_dict['gt_text']
+pr_text = out_dict['out_text']
+print('gt_text: ', gt_text) 
+print('pr_text: ', pr_text)
+gt_eq = gt_text.split(separator)[-1][1:]
+pr_eq = pr_text.split(separator)[-1][1:]
+
+print('eq_gt: ', gt_eq)
+print('eq_pred: ', pr_eq)
+similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split='->') 
 print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
+
+
 
 #%%
 # [5] Plot element-wise prediction accuracy.
@@ -92,29 +100,31 @@ num_sample = 100    #len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
 lens_ceq, lens_opes = [], []
 chem_dict = {el:[] for el in chemical_symbols}
-df = pd.DataFrame(columns=['idx', 'prompt', 'gt', 'ceq_gt', 'opes_gt', 'pred'])
+df = pd.DataFrame(columns=['idx', 'label', 'gt_text', 'pr_text', 'gt_eq', 'pr_eq', 'acc'])
 for idx in tqdm(range(num_sample), desc="Processing"):
     try:
         print(f'[{idx}] out_conf_dict[task]: ', out_conf_dict[task])
-        output=show_one_test(model, dataset, idx, tokenizer, set_length=out_conf_dict[task], 
-                        separator=separator, remove_header=remove_header, cut=post_cut, source=data_source, device=device)
-        label = output['label']
+        out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
+                        separator=separator, source=data_source ,device='cuda')
+        gt_text = out_dict['gt_text']
+        pr_text = out_dict['out_text']
+        print('gt_text: ', gt_text) 
+        print('pr_text: ', pr_text)
+        gt_eq = gt_text.split(separator)[-1][1:]
+        pr_eq = pr_text.split(separator)[-1][1:]
+        label = out_dict['label']
         len_label = len(label)
-        text_pred = output['answer']
-        text_gt = output['text']
-        ceq_gt, opes_gt = text_gt.split(separator)
-        len_ceq, len_opes = len(ceq_gt), len(opes_gt.split(' '))
-        lens_ceq.append(len_ceq)
-        lens_opes.append(len_opes)
-        if remove_header:
-            # eq_pred = eq_pred[len_label:]
-            text_gt = text_gt[len_label:]
-        similarity_reactants, similarity_products, overall_similarity = equation_similarity(eq_gt, eq_pred, whole_equation=True, split='->')
+        # ceq_gt, opes_gt = gt_text.split(separator)
+        # len_ceq, len_opes = len(ceq_gt), len(opes_gt.split(' '))
+        # lens_ceq.append(len_ceq)
+        # lens_opes.append(len_opes)
+        similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split='->')
         sim_reacs.append(similarity_reactants)
         sim_prods.append(similarity_products)
         sim_all.append(overall_similarity)
+        print('acc: ', overall_similarity)
         label_elements = find_atomic_species(label)
-        df = df._append({'idx': idx, 'prompt': label, 'gt': text_gt, 'ceq_gt': ceq_gt, 'opes_gt': opes_gt, 'pred': text_pred}, ignore_index=True)
+        df = df._append({'idx': idx, 'label': label, 'gt_text': gt_text, 'pr_text': pr_text, 'gt_eq': gt_eq, 'pr_eq': pr_eq, 'acc': overall_similarity}, ignore_index=True)
         for el in label_elements:
             chem_dict[el].append(overall_similarity)
     except Exception as e:
@@ -158,8 +168,8 @@ p = plotter(filename, output_filename=f'./save/{header}_{num_sample}_{tag}.html'
 # fig.suptitle(f'{header}_{num_sample}_{tag}', fontsize=16)
 # fig.savefig(f'./save/{header}_{num_sample}_{tag}_scatter.png')
 
-len_data = np.array([lens_tgt, lens_ceq, sim_all]).T
-np.save(f'./save/{header}_{num_sample}_{tag}_len_data.npy', len_data)
+# len_data = np.array([lens_tgt, lens_ceq, sim_all]).T
+# np.save(f'./save/{header}_{num_sample}_{tag}_len_data.npy', len_data)
 
 # save df as csv 
 df.to_csv(f'./save/{header}_{num_sample}_{tag}_df.csv')
