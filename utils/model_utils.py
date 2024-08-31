@@ -1,7 +1,10 @@
 import numpy as np 
 import torch
-from transformers import Trainer, AutoModelForCausalLM, TrainingArguments
+from transformers import Trainer, AutoModelForCausalLM, TrainingArguments, AutoTokenizer
 import torch.nn as nn
+
+
+allowed_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()[]<>+-*=/., "
 
 def get_epoch_lists(total_epochs, num_folds=5, ep_per_fold=1):
     # Initialize lists to store performance metrics for each fold
@@ -24,6 +27,29 @@ def get_epoch_lists(total_epochs, num_folds=5, ep_per_fold=1):
     total_sum = sum([sum(sublist) for sublist in ep_lists])
     print("Total epochs:", total_sum)
     return ep_lists
+
+def setup_tokenizer(tk_model, pad_tokenizer):
+    tokenizer = AutoTokenizer.from_pretrained(tk_model)
+    if pad_tokenizer:
+        tokenizer.pad_token = tokenizer.eos_token
+    return tokenizer
+
+def load_model(model_name, hf_model, load_pretrained, device):
+    if load_pretrained:
+        return AutoModelForCausalLM.from_pretrained(model_name).to(device)
+    else:
+        return AutoModelForCausalLM.from_pretrained(hf_model).to(device)
+
+class CustomLogitsProcessor:
+    def __init__(self, allowed_tokens):
+        self.allowed_tokens = allowed_tokens
+
+    def __call__(self, input_ids, scores):
+        # Mask logits for all tokens not in the allowed set
+        mask = torch.ones_like(scores) * -float('inf')
+        mask[:, self.allowed_tokens] = 0
+        return scores + mask
+
 
 
 class CustomTrainer_CE(Trainer):

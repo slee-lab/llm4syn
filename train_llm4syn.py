@@ -28,9 +28,9 @@ os.environ["WANDB_PROJECT"] = wandb_project
 # os.environ["WANDB_LOG_MODEL"] = "checkpoint" # log all model checkpoints
 
 # hparamm for training    #TODO save the config for wandb??
-task = 'lhsope2rhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
+task = 'rhsope2lhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
 model_tag = 'dgpt2'
-ver_tag = 'v1.1.1'
+ver_tag = 'v1.2.1'
 
 overwrite_output_dir=True
 nepochs = 100    # total eppochs for training 
@@ -71,11 +71,7 @@ conf_dict = make_dict([
 print(conf_dict)
 #%%
 # load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(tk_model)     #TODO: check the utility oof tokenizer and data collator 
-if pad_tokenizer:
-    tokenizer.pad_token = tokenizer.eos_token   #!
-    # tokenizer.add_special_tokens({'pad_token': '[PAD]'})  # checkk if we need this line. #TODO case by case..??
-# Data collator
+tokenizer = setup_tokenizer(tk_model, pad_tokenizer)
 data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
 # test tokenizer    #TODO skip this section in the end??
@@ -95,11 +91,11 @@ print('decoded (text): ', decoded_input1)
 
 def tokenize_function(examples):
     return tokenizer(examples["text"], padding=True, truncation=True, return_tensors="pt")  # padding="max_length"
-# tokenized dataset
+
 tokenized_datasets = dataset.map(tokenize_function, batched=True, remove_columns=dataset["train"].column_names,)
 
-
 #%%
+# load model 
 # load model 
 if load_pretrained:
     model = AutoModelForCausalLM.from_pretrained(model_name).to(device)

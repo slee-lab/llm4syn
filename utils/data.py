@@ -180,15 +180,17 @@ class Dataset_LLM4SYN(LLMDataset):   # TODO: combine all the dataset class into 
             tgt = d['target']
             eq = d['eq']
             lhs,rhs = eq.split(arrow_l2r)
-            catalog = {'task': self.task, 'separator': self.separator, 'eq': eq, 'lhs': lhs, 'rhs': rhs, 'tgt': tgt, 'ope': '['+" ".join(protocol)+']'}
+            # catalog = {'task': self.task, 'separator': self.separator, 'eq': eq, 'lhs': lhs, 'rhs': rhs, 'tgt': tgt, 'ope': '['+" ".join(protocol)+']'}
+            catalog = {'task': self.task, 'separator': self.separator, 'eq': eq, 'lhs': lhs, 'rhs': rhs, 'tgt': tgt, 'ope': " ".join(protocol)}
             label, text = label_text(**catalog)
             self.data_dict["label"].append(label)
             self.data_dict["text"].append(text)
 
 
+black_list = ['?', '!', ';', '{', '}', '\\', '@', '#', '$', '%', '^', '&', '_', '~', '`', 'δ', '�', 'ㅋ']
 
 def one_result(model, tokenizer, dataset, idx, set_length={'type': 'add', 'value': 50}, 
-                  separator=None, source='test',device='cuda'): 
+                  separator=None, source='test',device='cuda', **kwargs):
     """_summary_
 
     Args:
@@ -210,11 +212,14 @@ def one_result(model, tokenizer, dataset, idx, set_length={'type': 'add', 'value
     text = dataset[source][idx]['text']
     # remove separator if it is not None from label
     label_wo_sep = label.replace(separator, '')
-    source = label_wo_sep.split(separator_o)[0]
+    origin = label_wo_sep.split(separator_o)[0].split(',')   #split by ',' and take the first part. This can limit the length of the input if there are multiple reactants.
+    # sort the reactants by length, and take the median length of the reactants
+    origin.sort(key=len)
+    origin = origin[len(origin)//2]
     
-    tok_source = tokenizer(source, padding=True, truncation=True, return_tensors="pt")
-    tok_source = {key: tensor.to(device) for key, tensor in tok_source.items()}
-    tok_source_len = tok_source['input_ids'].shape[-1]
+    tok_origin = tokenizer(origin, padding=True, truncation=True, return_tensors="pt")
+    tok_origin = {key: tensor.to(device) for key, tensor in tok_origin.items()}
+    tok_origin_len = tok_origin['input_ids'].shape[-1]
     
     tok_label = tokenizer(label, padding=True, truncation=True, return_tensors="pt")
     tok_label = {key: tensor.to(device) for key, tensor in tok_label.items()}
@@ -223,14 +228,16 @@ def one_result(model, tokenizer, dataset, idx, set_length={'type': 'add', 'value
     if set_length['type']=='add':
         max_length = tok_label_len + int(set_length['value'])
     else: 
-        max_length = tok_label_len + int(tok_source_len*float(set_length['value']))   #TODO: multiply the length of input excluding the OPE part (split by ':' and take the first part)
+        max_length = tok_label_len + int(tok_origin_len*float(set_length['value']))   #TODO: multiply the length of input excluding the OPE part (split by ':' and take the first part)
     
-    print('tok_source_len, tok_label_len, max_length: ', tok_source_len, tok_label_len, max_length)
-    generated_ids = model.generate(**tok_label, max_length=max_length, repetition_penalty=1.1)
+    print('tok_origin_len, tok_label_len, max_length: ', tok_origin_len, tok_label_len, max_length)
+    generated_ids = model.generate(**tok_label, max_length=max_length, **kwargs)
     # print('text: ', text)
     tok_text = tokenizer(text)
     gt_text = tokenizer.decode(tok_text["input_ids"])
     out_text = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+    for bk in black_list:
+        out_text = out_text.replace(bk, '')
 
     # print('gtruth: ', gt_answer) 
     # print('answer: ', output)

@@ -16,6 +16,7 @@ from huggingface_hub import login
 import wandb
 from env_config import * 
 from utils.data import *
+from utils.model_utils import *
 from utils.metrics import *
 from utils.catalog import *
 file_name = os.path.basename(__file__)
@@ -25,9 +26,9 @@ login(hf_api_key_w, add_to_git_credential=True)
 
 #%%
 # hparamm for training    #TODO save the config for wandb??
-task = 'lhsope2rhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
+task = 'tgtope2ceq' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
 model_tag = 'dgpt2'
-ver_tag = 'v1.1.1'
+ver_tag = 'v1.2.1'
 
 #%%
 # [1] Load dataset
@@ -43,18 +44,16 @@ run_name = f'{task}_{model_tag}_{ver_tag}'  #TODO put all config part into one p
 model_name = join(hf_usn, run_name)   #TODO any newer model? 
 tk_model = model_name # set tokenizer model loaded from HF (usually same as hf_model)
 pad_tokenizer=True
+print('run_name: ', run_name)
+print('model_name: ', model_name)
 
 #%%
 # [2] load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(tk_model) 
-if pad_tokenizer:
-    tokenizer.pad_token = tokenizer.eos_token  
-    # tokenizer.add_special_tokens({'pad_token': '[PAD]'})  # checkk if we need this line. 
+tokenizer = setup_tokenizer(tk_model, pad_tokenizer)
 
 def tokenize_function(examples):
     return tokenizer(examples["text"], padding=True, truncation=True, return_tensors="pt")  # padding="max_length"
 
-# tokenized dataset
 tokenized_datasets = dataset.map(tokenize_function, batched=True, remove_columns=dataset["train"].column_names,)
 small_train_dataset = tokenized_datasets["train"].shuffle(seed=seedn)
 small_eval_dataset = tokenized_datasets["test"].shuffle(seed=seedn)
@@ -68,9 +67,11 @@ model0 = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2").to(device
 # [4] Inference using trained model 
 idx = 3
 data_source = 'test'  
+gen_conf = {'num_beams':6, 'do_sample':True, 'num_beam_groups':1}
+print('gen_conf: ', gen_conf)
 print(f'[{idx}] <<our prediction (before training)>>')
 out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
-                  separator=separator, source=data_source ,device='cuda')
+                  separator=separator, source=data_source ,device='cuda', **gen_conf)
 gt_text = out_dict['gt_text']
 pr_text = out_dict['out_text']
 print('gt_text: ', gt_text) 
@@ -78,7 +79,7 @@ print('pr_text: ', pr_text)
 
 print(f'[{idx}] <<our prediction (after training)>>')
 out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
-                separator=separator, source=data_source ,device='cuda')
+                separator=separator, source=data_source ,device='cuda', **gen_conf)
 gt_text = out_dict['gt_text']
 pr_text = out_dict['out_text']
 print('gt_text: ', gt_text) 
@@ -105,7 +106,7 @@ for idx in tqdm(range(num_sample), desc="Processing"):
     try:
         print(f'[{idx}] out_conf_dict[task]: ', out_conf_dict[task])
         out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
-                        separator=separator, source=data_source ,device='cuda')
+                        separator=separator, source=data_source ,device='cuda', **gen_conf)
         gt_text = out_dict['gt_text']
         pr_text = out_dict['out_text']
         print('gt_text: ', gt_text) 
