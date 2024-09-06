@@ -26,7 +26,7 @@ login(hf_api_key_w, add_to_git_credential=True)
 
 #%%
 # hparamm for training    #TODO save the config for wandb??
-task = 'tgtope2ceq' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
+task = 'rhsope2lhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
 model_tag = 'dgpt2'
 ver_tag = 'v1.2.1'
 
@@ -90,22 +90,25 @@ pr_eq = pr_text.split(separator)[-1][1:]
 print('eq_gt: ', gt_eq)
 print('eq_pred: ', pr_eq)
 similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split='->') 
-print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
+j_similarity = jaccard_similarity(gt_eq, pr_eq)
 
+print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
+print(f"Jaccard Similarity: {j_similarity:.2f}")
 
 
 #%%
 # [5] Plot element-wise prediction accuracy.
-tag = 'v1.2'
+tag = 'v1.2.0'
 num_sample = len(dataset[data_source])
-sim_reacs, sim_prods, sim_all = [], [], []
+sim_reacs, sim_prods, sim_all, sim_jac = [], [], [], []
 lens_ceq, lens_opes = [], []
 chem_dict = {el:[] for el in chemical_symbols}
-df = pd.DataFrame(columns=['idx', 'label', 'gt_text', 'pr_text', 'gt_eq', 'pr_eq', 'acc'])
+chem_dict_jac = {el:[] for el in chemical_symbols}
+df = pd.DataFrame(columns=['idx', 'label', 'gt_text', 'pr_text', 'gt_eq', 'pr_eq', 'acc', 'jac'])
 for idx in tqdm(range(num_sample), desc="Processing"):
     try:
         print(f'[{idx}] out_conf_dict[task]: ', out_conf_dict[task])
-        out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
+        out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
                         separator=separator, source=data_source ,device='cuda', **gen_conf)
         gt_text = out_dict['gt_text']
         pr_text = out_dict['out_text']
@@ -124,10 +127,14 @@ for idx in tqdm(range(num_sample), desc="Processing"):
         sim_prods.append(similarity_products)
         sim_all.append(overall_similarity)
         print('acc: ', overall_similarity)
+        j_similarity = jaccard_similarity(gt_eq, pr_eq)
+        sim_jac.append(j_similarity)
+        print(f"Jaccard Similarity: {overall_similarity:.2f}")
         label_elements = find_atomic_species(label)
-        df = df._append({'idx': idx, 'label': label, 'gt_text': gt_text, 'pr_text': pr_text, 'gt_eq': gt_eq, 'pr_eq': pr_eq, 'acc': overall_similarity}, ignore_index=True)
+        df = df._append({'idx': idx, 'label': label, 'gt_text': gt_text, 'pr_text': pr_text, 'gt_eq': gt_eq, 'pr_eq': pr_eq, 'acc': overall_similarity, 'jac': j_similarity}, ignore_index=True)
         for el in label_elements:
             chem_dict[el].append(overall_similarity)
+            chem_dict_jac[el].append(j_similarity)
     except Exception as e:
         print(f"Error at idx={idx}: {e}")
 
@@ -137,9 +144,12 @@ filename = f'./save/{header}_{num_sample}_{tag}.csv'
 print(model_name)
 print(f"(average) Reactants Similarity: {np.mean(sim_reacs):.2f}, Products Similarity: {np.mean(sim_prods):.2f}, Overall Similarity: {np.mean(sim_all):.2f}")
 chem_mean_dict = {key: float(np.mean(value)) for key, value in chem_dict.items() if value}
+chem_mean_dict_jac = {key: float(np.mean(value)) for key, value in chem_dict_jac.items() if value}
 header = run_name + '_' + data_source #'r2l_mean'
 filename = f'./save/{header}_{num_sample}_{tag}.csv'
 save_dict_as_csv(chem_mean_dict, filename)
+filename_jac = f'./save/{header}_{num_sample}_{tag}_jac.csv'
+save_dict_as_csv(chem_mean_dict_jac, filename_jac)
 print(f"Dictionary saved as {filename}")
 # save chem_dict as pkl
 with open(f'./save/{header}_{num_sample}_{tag}.pkl', 'wb') as f:
