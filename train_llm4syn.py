@@ -28,7 +28,7 @@ os.environ["WANDB_PROJECT"] = wandb_project
 # os.environ["WANDB_LOG_MODEL"] = "checkpoint" # log all model checkpoints
 
 # hparamm for training    #TODO save the config for wandb??
-task = 'rhsope2lhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
+task = 'tgt2ceq' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
 model_tag = 'dgpt2'
 ver_tag = 'v1.2.1'
 
@@ -40,7 +40,7 @@ lr=2e-5
 wdecay=0.01
 per_device_train_batch_size = 4  # default: 8
 per_device_eval_batch_size = per_device_train_batch_size  # default: 8
-load_pretrained=False 
+load_pretrained=True
 pad_tokenizer=True
 save_indices = True
 rm_ckpts = True
@@ -76,18 +76,22 @@ data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
 # test tokenizer    #TODO skip this section in the end??
 idx0 = 2
-label = dataset['train'][idx0]['label']#[0]
-print('label: ', label)
-encoded_input0 = tokenizer(label)   # encoding  (label)
-print('encoded (label): ', encoded_input0)
-decoded_input0 = tokenizer.decode(encoded_input0["input_ids"])  # decoding  (label)
-print('decoded (label): ', decoded_input0)
-text = dataset['train'][idx0]['text']
-print('text: ', text)
-encoded_input1 = tokenizer(text)   ## encoding (text)
-print('encoded (text): ', encoded_input1)
-decoded_input1 = tokenizer.decode(encoded_input1["input_ids"])  # decoding  (text)
-print('decoded (text): ', decoded_input1)
+
+try:
+    label = dataset['train'][idx0]['label']#[0]
+    print('label: ', label)
+    encoded_input0 = tokenizer(label)   # encoding  (label)
+    print('encoded (label): ', encoded_input0)
+    decoded_input0 = tokenizer.decode(encoded_input0["input_ids"])  # decoding  (label)
+    print('decoded (label): ', decoded_input0)
+    text = dataset['train'][idx0]['text']
+    print('text: ', text)
+    encoded_input1 = tokenizer(text)   ## encoding (text)
+    print('encoded (text): ', encoded_input1)
+    decoded_input1 = tokenizer.decode(encoded_input1["input_ids"])  # decoding  (text)
+    print('decoded (text): ', decoded_input1)
+except Exception as e:
+    print('error: ', e)
 
 def tokenize_function(examples):
     return tokenizer(examples["text"], padding=True, truncation=True, return_tensors="pt")  # padding="max_length"
@@ -107,28 +111,31 @@ print(model.config)
 #%% 
 # Inference using model before trainign before training #TODOdelete this section in the end?? 
 idx = 82
-data_source = 'test'
-print(f'[{idx}] <<our prediction (before training)>>')
-out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
-                  separator=separator, source=data_source ,device='cuda')
-print('gt_text: ', out_dict['gt_text']) 
-print('out_text: ', out_dict['out_text'])
+try: 
+    data_source = 'test'
+    print(f'[{idx}] <<our prediction (before training)>>')
+    out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
+                    separator=separator, source=data_source ,device='cuda')
+    print('gt_text: ', out_dict['gt_text']) 
+    print('out_text: ', out_dict['out_text'])
 
-print(f'[{idx}] <<our prediction (after training)>>')
-out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
-                separator=separator, source=data_source ,device='cuda')
-gt_text = out_dict['gt_text']
-pr_text = out_dict['out_text']
-print('gt_text: ', gt_text) 
-print('pr_text: ', pr_text)
-gt_eq = gt_text.split(separator)[-1][1:]
-pr_eq = pr_text.split(separator)[-1][1:]
+    print(f'[{idx}] <<our prediction (after training)>>')
+    out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
+                    separator=separator, source=data_source ,device='cuda')
+    gt_text = out_dict['gt_text']
+    pr_text = out_dict['out_text']
+    print('gt_text: ', gt_text) 
+    print('pr_text: ', pr_text)
+    gt_eq = gt_text.split(separator)[-1][1:]
+    pr_eq = pr_text.split(separator)[-1][1:]
 
-print('eq_gt: ', gt_eq)
-print('eq_pred: ', pr_eq)
-similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split='->') 
-print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
-
+    print('eq_gt: ', gt_eq)
+    print('eq_pred: ', pr_eq)
+    similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split='->') 
+    print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
+except Exception as e:
+    print('error: ', e)
+    
 #%%
 # Set up K-fold cross valudation
 kf = KFold(n_splits=num_folds, shuffle=True, random_state=seedn)

@@ -67,7 +67,7 @@ model0 = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2").to(device
 # [4] Inference using trained model 
 idx = 3
 data_source = 'test'  
-gen_conf = {'num_beams':6, 'do_sample':True, 'num_beam_groups':1}
+gen_conf = {'num_beams':6, 'do_sample':True, 'num_beam_groups':1}   #TODO: compare with different options?? 
 print('gen_conf: ', gen_conf)
 print(f'[{idx}] <<our prediction (before training)>>')
 out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
@@ -96,8 +96,8 @@ print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Sim
 
 #%%
 # [5] Plot element-wise prediction accuracy.
-tag = 'v1.1'
-num_sample = 100    #len(dataset[data_source])
+tag = 'v1.2'
+num_sample = len(dataset[data_source])
 sim_reacs, sim_prods, sim_all = [], [], []
 lens_ceq, lens_opes = [], []
 chem_dict = {el:[] for el in chemical_symbols}
@@ -119,7 +119,7 @@ for idx in tqdm(range(num_sample), desc="Processing"):
         # len_ceq, len_opes = len(ceq_gt), len(opes_gt.split(' '))
         # lens_ceq.append(len_ceq)
         # lens_opes.append(len_opes)
-        similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split='->')
+        similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split='->')  #TODO: compare the different error functions??
         sim_reacs.append(similarity_reactants)
         sim_prods.append(similarity_products)
         sim_all.append(overall_similarity)

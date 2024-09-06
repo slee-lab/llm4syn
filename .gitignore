@@ -13,3 +13,5 @@ save/
 test_lhs2rhs.py
 test_llama3.py
 data_check.py
+
+test_llm4syn_jaccard.py
