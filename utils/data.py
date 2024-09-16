@@ -1,7 +1,9 @@
 import numpy as np 
 import torch
+import random
 from datasets import DatasetDict, Dataset
 import inspect
+
 
 def make_dict(variables):
     frame = inspect.currentframe().f_back
@@ -10,6 +12,10 @@ def make_dict(variables):
 
 eqsplit = '=='
 remove_ing_exception = {'Shaping': 'Shape'}
+opes_list = 'SolutionMix', 'Shape', 'Dry', 'Mix', 'Heat', 'LiquidGrind', 'Quench'
+
+arrow_l2r = '->'
+separator_o = ': '
 
 def space_separator(target_string: str, separator: str) -> str:
     # Find the index of the separator in the target string
@@ -33,7 +39,7 @@ def space_separator(target_string: str, separator: str) -> str:
     return target_string
 
 class LLMDataset:
-    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None, task=None):
+    def __init__(self, data, index=None, te_ratio=0.1, separator=' || ', cut=None, arrow=arrow_l2r, task=None):
         self.data = data
         self.num = len(self.data)
         self.te_ratio = te_ratio
@@ -51,6 +57,7 @@ class LLMDataset:
             self.cut = '@@@@@@@@@@@@@@@'
         else: 
             self.cut = cut
+        self.arrow = arrow
         self.task = task
         self.get_data_list()
         self.get_data_dict()
@@ -124,9 +131,7 @@ class Dataset_template(LLMDataset):
 #             self.data_dict["label"].append(space_separator(prompt+ self.separator, self.separator))  #!
 #             self.data_dict["text"].append(space_separator(prompt+ self.separator +" ".join(protocol), self.separator))
 
-            
-arrow_l2r = '->'
-separator_o = ': '
+
 
 def label_text(task='lhs2rhs', separator_o=separator_o, lhs=None, rhs=None, tgt=None, eq=None, ope=None, separator='->'):
     if task == 'lhs2rhs':
@@ -153,15 +158,15 @@ def label_text(task='lhs2rhs', separator_o=separator_o, lhs=None, rhs=None, tgt=
 
 
 class Dataset_LLM4SYN(LLMDataset):   # TODO: combine all the dataset class into one (or two)
-    def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, task=None):
-        super().__init__(data, index, te_ratio, separator, cut, task)
+    def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, arrow=arrow_l2r, task=None):
+        super().__init__(data, index, te_ratio, separator, cut, arrow, task)
 
     def get_data_list(self):
         self.data_list = [
             {
                 "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
                 "opes": self.data[i]['operations'],
-                'eq': self.data[i]['reaction_string'].replace('==', arrow_l2r).split(self.cut)[0]
+                'eq': self.data[i]['reaction_string'].replace('==', self.arrow).split(self.cut)[0]
             }
             for i in self.index
         ]
@@ -179,7 +184,7 @@ class Dataset_LLM4SYN(LLMDataset):   # TODO: combine all the dataset class into 
                     protocol.append(x.replace('ing', ''))
             tgt = d['target']
             eq = d['eq']
-            lhs,rhs = eq.split(arrow_l2r)
+            lhs,rhs = eq.split(self.arrow)
             # catalog = {'task': self.task, 'separator': self.separator, 'eq': eq, 'lhs': lhs, 'rhs': rhs, 'tgt': tgt, 'ope': '['+" ".join(protocol)+']'}
             catalog = {'task': self.task, 'separator': self.separator, 'eq': eq, 'lhs': lhs, 'rhs': rhs, 'tgt': tgt, 'ope': " ".join(protocol)}
             label, text = label_text(**catalog)

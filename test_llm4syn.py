@@ -26,9 +26,10 @@ login(hf_api_key_w, add_to_git_credential=True)
 
 #%%
 # hparamm for training    #TODO save the config for wandb??
-task = 'rhsope2lhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
+task = 'lhs2rhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
 model_tag = 'dgpt2'
 ver_tag = 'v1.2.1'
+arrow = '->'    # '->', '==', 'etc
 
 #%%
 # [1] Load dataset
@@ -39,7 +40,7 @@ data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_LLM4SYN(data1, index=None, te_ratio=0.1, separator=separator, cut=cut, task=task).dataset 
+dataset = Dataset_LLM4SYN(data1, index=None, te_ratio=0.1, separator=separator, cut=cut, arrow=arrow, task=task).dataset 
 run_name = f'{task}_{model_tag}_{ver_tag}'  #TODO put all config part into one place
 model_name = join(hf_usn, run_name)   #TODO any newer model? 
 tk_model = model_name # set tokenizer model loaded from HF (usually same as hf_model)
@@ -67,7 +68,7 @@ model0 = AutoModelForCausalLM.from_pretrained("distilbert/distilgpt2").to(device
 # [4] Inference using trained model 
 idx = 3
 data_source = 'test'  
-gen_conf = {'num_beams':6, 'do_sample':True, 'num_beam_groups':1}   #TODO: compare with different options?? 
+gen_conf = {'num_beams':2, 'do_sample':True, 'num_beam_groups':1}   #TODO: compare with different options?? 
 print('gen_conf: ', gen_conf)
 print(f'[{idx}] <<our prediction (before training)>>')
 out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
@@ -89,7 +90,7 @@ pr_eq = pr_text.split(separator)[-1][1:]
 
 print('eq_gt: ', gt_eq)
 print('eq_pred: ', pr_eq)
-similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split='->') 
+similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split=arrow) 
 j_similarity = jaccard_similarity(gt_eq, pr_eq)
 
 print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
@@ -98,66 +99,89 @@ print(f"Jaccard Similarity: {j_similarity:.2f}")
 
 #%%
 # [5] Plot element-wise prediction accuracy.
-tag = 'v1.2.0'
+tag = 'v3.2'
 num_sample = len(dataset[data_source])
-sim_reacs, sim_prods, sim_all, sim_jac = [], [], [], []
-lens_ceq, lens_opes = [], []
-chem_dict = {el:[] for el in chemical_symbols}
-chem_dict_jac = {el:[] for el in chemical_symbols}
-df = pd.DataFrame(columns=['idx', 'label', 'gt_text', 'pr_text', 'gt_eq', 'pr_eq', 'acc', 'jac'])
+sim_dict = {'reacts':[], 'prods':[], 'all':[], 'jac':[], 'lens_tgt':[], 'lens_ceq':[], 'len_opes':[], 'elem_tan':{el:[] for el in chemical_symbols}, 'elem_jac':{el:[] for el in chemical_symbols}}
+sim_dict0 = {'reacts':[], 'prods':[], 'all':[], 'jac':[], 'lens_tgt':[], 'lens_ceq':[], 'len_opes':[], 'elem_tan':{el:[] for el in chemical_symbols}, 'elem_jac':{el:[] for el in chemical_symbols}}
+model_list = [model, model0]
+sim_dict_list = [sim_dict, sim_dict0]
+label_list = ['', '.0']
+gt_cut_add = 0
+print('gt_cut_add: ', gt_cut_add)
+
+df = pd.DataFrame(columns=['idx', 'label', 'gt_text', 'pr_text', 'gt_eq', 'pr_eq', 'acc', 'jac', 'pr_text.0', 'pr_eq.0', 'acc.0', 'jac.0'])
 for idx in tqdm(range(num_sample), desc="Processing"):
-    try:
-        print(f'[{idx}] out_conf_dict[task]: ', out_conf_dict[task])
-        out_dict = one_result(model0, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
-                        separator=separator, source=data_source ,device='cuda', **gen_conf)
-        gt_text = out_dict['gt_text']
-        pr_text = out_dict['out_text']
-        print('gt_text: ', gt_text) 
-        print('pr_text: ', pr_text)
-        gt_eq = gt_text.split(separator)[-1][1:]
-        pr_eq = pr_text.split(separator)[-1][1:]
-        label = out_dict['label']
-        len_label = len(label)
-        # ceq_gt, opes_gt = gt_text.split(separator)
-        # len_ceq, len_opes = len(ceq_gt), len(opes_gt.split(' '))
-        # lens_ceq.append(len_ceq)
-        # lens_opes.append(len_opes)
-        similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split='->')  #TODO: compare the different error functions??
-        sim_reacs.append(similarity_reactants)
-        sim_prods.append(similarity_products)
-        sim_all.append(overall_similarity)
-        print('acc: ', overall_similarity)
-        j_similarity = jaccard_similarity(gt_eq, pr_eq)
-        sim_jac.append(j_similarity)
-        print(f"Jaccard Similarity: {overall_similarity:.2f}")
-        label_elements = find_atomic_species(label)
-        df = df._append({'idx': idx, 'label': label, 'gt_text': gt_text, 'pr_text': pr_text, 'gt_eq': gt_eq, 'pr_eq': pr_eq, 'acc': overall_similarity, 'jac': j_similarity}, ignore_index=True)
-        for el in label_elements:
-            chem_dict[el].append(overall_similarity)
-            chem_dict_jac[el].append(j_similarity)
-    except Exception as e:
-        print(f"Error at idx={idx}: {e}")
+    row_dict = {}
+    append_ = 0
+    for model_, label_, sim_dict_ in zip(model_list, label_list, sim_dict_list):
+        try:
+            print(f'[{idx}] out_conf_dict[task]: ', out_conf_dict[task])
+            out_dict = one_result(model_, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
+                            separator=separator, source=data_source ,device='cuda', **gen_conf) 
+            label, gt_text, pr_text  = out_dict['label'], out_dict['gt_text'], out_dict['out_text']
+            pr_text = pr_text.replace('\n', '')
+            len_label = len(label)
+            ###
+            if gt_cut_add is not None:
+                
+                pr_text = pr_text[:int(len(gt_text)+gt_cut_add)]
+            
+            ###
+            gt_eq = gt_text[len_label:]
+            pr_eq = pr_text[len_label:]
+            if len(pr_eq) == 0:
+                pr_eq = 'Error'
+                pr_text = pr_text + ' Error'
+            similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split=arrow)  #TODO: compare the different error functions??
+            j_similarity = jaccard_similarity(gt_eq, pr_eq)
+            sim_dict_['reacts'].append(similarity_reactants)
+            sim_dict_['prods'].append(similarity_products)
+            sim_dict_['all'].append(overall_similarity)
+            sim_dict_['jac'].append(j_similarity)
+            print(f'gt_text{label_}: ', gt_text) 
+            print(f'pr_text{label_}: ', pr_text)
+            print(f'acc{label_}: ', overall_similarity)
+            print(f"Jaccard Similarity{label_}: {overall_similarity:.2f}")
+            label_elements = find_atomic_species(label)
+            # append row_dict with the values
+            row_dict.update({'idx': idx, f'label': label, f'gt_text': gt_text, f'pr_text{label_}': pr_text, f'gt_eq': gt_eq, f'pr_eq{label_}': pr_eq, f'acc{label_}': overall_similarity, f'jac{label_}': j_similarity})
+            append_ += 1
+            for el in label_elements:
+                sim_dict_['elem_tan'][el].append(overall_similarity)
+                sim_dict_['elem_jac'][el].append(j_similarity)
+        except Exception as e:
+            print(f"Error at idx={idx}: {e}")
+            row_dict_ = {f'pr_text{label_}': label_keep+'Error', f'pr_eq{label_}': 'Error', f'acc{label_}': 0.0, f'jac{label_}': 0.0}
+            print('row_dict_: ', row_dict_)
+            row_dict.update(row_dict_ )
+        label_keep = label
+    if append_>0:
+        df = df._append(row_dict, ignore_index=True)
+    print('====================')
+
 
 header = run_name + '_' + data_source #'r2l_mean'
 filename = f'./save/{header}_{num_sample}_{tag}.csv'
 
 print(model_name)
-print(f"(average) Reactants Similarity: {np.mean(sim_reacs):.2f}, Products Similarity: {np.mean(sim_prods):.2f}, Overall Similarity: {np.mean(sim_all):.2f}")
-chem_mean_dict = {key: float(np.mean(value)) for key, value in chem_dict.items() if value}
-chem_mean_dict_jac = {key: float(np.mean(value)) for key, value in chem_dict_jac.items() if value}
-header = run_name + '_' + data_source #'r2l_mean'
-filename = f'./save/{header}_{num_sample}_{tag}.csv'
-save_dict_as_csv(chem_mean_dict, filename)
-filename_jac = f'./save/{header}_{num_sample}_{tag}_jac.csv'
-save_dict_as_csv(chem_mean_dict_jac, filename_jac)
-print(f"Dictionary saved as {filename}")
-# save chem_dict as pkl
-with open(f'./save/{header}_{num_sample}_{tag}.pkl', 'wb') as f:
-    pkl.dump(chem_dict, f)
+for model_, label_, sim_dict_ in zip(model_list, label_list, sim_dict_list):
+    print(f"(average) Reactants Similarity: {np.mean(sim_dict_['reacts']):.2f}, Products Similarity: {np.mean(sim_dict_['prods']):.2f}, Overall Similarity: {np.mean(sim_dict_['all']):.2f}")
+    chem_mean_dict = {key: float(np.mean(value)) for key, value in sim_dict_['elem_tan'].items() if value}
+    chem_mean_dict_jac = {key: float(np.mean(value)) for key, value in sim_dict_['elem_jac'].items() if value}
+    header = run_name + '_' + data_source #'r2l_mean'
+    filename = f'./save/{header}_{num_sample}_{tag}{label_}_tan.csv'
+    save_dict_as_csv(chem_mean_dict, filename)
+    filename_jac = f'./save/{header}_{num_sample}_{tag}{label_}_jac.csv'
+    save_dict_as_csv(chem_mean_dict_jac, filename_jac)
+    print(f"Dictionary saved as {filename}")
+    # save chem_dict as pkl
+    # with open(f'./save/{header}_{num_sample}_{tag}{label_}.pkl', 'wb') as f:
+    #     pkl.dump(sim_dict_['elem_tan'], f)
 
-from utils.periodic_trends import plotter
-p = plotter(filename, output_filename=f'./save/{header}_{num_sample}_{tag}.html', under_value=0, over_value=1)
+    from utils.periodic_trends import plotter
+    p = plotter(filename, output_filename=f'./save/{header}_{num_sample}_{tag}{label_}.html', under_value=0, over_value=1)
 
+df.to_csv(f'./save/{header}_{num_sample}_{tag}_df.csv')
 
 # fig, axs = plt.subplots(1, 2, figsize=(10, 5))
 # ax = axs[0]
@@ -182,8 +206,6 @@ p = plotter(filename, output_filename=f'./save/{header}_{num_sample}_{tag}.html'
 # len_data = np.array([lens_tgt, lens_ceq, sim_all]).T
 # np.save(f'./save/{header}_{num_sample}_{tag}_len_data.npy', len_data)
 
-# save df as csv 
-df.to_csv(f'./save/{header}_{num_sample}_{tag}_df.csv')
 
 # %%
 # [6] model view (optional)

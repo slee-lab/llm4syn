@@ -28,9 +28,10 @@ os.environ["WANDB_PROJECT"] = wandb_project
 # os.environ["WANDB_LOG_MODEL"] = "checkpoint" # log all model checkpoints
 
 # hparamm for training    #TODO save the config for wandb??
-task = 'tgt2ceq' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
+task = 'rhs2lhs' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
 model_tag = 'dgpt2'
-ver_tag = 'v1.2.1'
+ver_tag = 'v1.3.1'
+arrow = '=='    # '->', '==', 'etc
 
 overwrite_output_dir=True
 nepochs = 100    # total eppochs for training 
@@ -40,7 +41,7 @@ lr=2e-5
 wdecay=0.01
 per_device_train_batch_size = 4  # default: 8
 per_device_eval_batch_size = per_device_train_batch_size  # default: 8
-load_pretrained=True
+load_pretrained=False
 pad_tokenizer=True
 save_indices = True
 rm_ckpts = True
@@ -55,7 +56,7 @@ data = json.load(open(data_path, 'r'))
 num_sample = int(len(data)*sample_ratio)
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
-dataset = Dataset_LLM4SYN(data1, index=None, te_ratio=0.1, separator=separator, cut=cut, task=task).dataset 
+dataset = Dataset_LLM4SYN(data1, index=None, te_ratio=0.1, separator=separator, cut=cut, arrow=arrow, task=task).dataset 
 run_name = f'{task}_{model_tag}_{ver_tag}'  #TODO put all config part into one place
 model_name = join(hf_usn, run_name)   #TODO any newer model? 
 hf_model = gpt_model_dict[model_tag] 
@@ -63,7 +64,7 @@ tk_model = hf_model
 
 
 conf_dict = make_dict([
-    file_name, separator, cut, nepochs, num_folds, ep_per_fold, lr, wdecay, 
+    file_name, arrow, separator, cut, nepochs, num_folds, ep_per_fold, lr, wdecay, 
     per_device_train_batch_size, per_device_eval_batch_size,
     run_name, hf_model, model_name, tk_model, load_pretrained, 
     pad_tokenizer, save_indices, rm_ckpts
@@ -131,8 +132,13 @@ try:
 
     print('eq_gt: ', gt_eq)
     print('eq_pred: ', pr_eq)
-    similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split='->') 
+    print('eq_gt: ', gt_eq)
+    print('eq_pred: ', pr_eq)
+    similarity_reactants, similarity_products, overall_similarity = equation_similarity(gt_eq, pr_eq, whole_equation=full_equation_dict[task], split=arrow) 
+    j_similarity = jaccard_similarity(gt_eq, pr_eq)
+
     print(f"(average) Reactants Similarity: {similarity_reactants:.2f}, Products Similarity: {similarity_products:.2f}, Overall Similarity: {overall_similarity:.2f}")
+    print(f"Jaccard Similarity: {j_similarity:.2f}")
 except Exception as e:
     print('error: ', e)
     
