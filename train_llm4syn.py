@@ -50,6 +50,7 @@ rm_ckpts = True
 #%%
 # load data
 random.seed(seedn)
+set_seed(seedn) #!
 sample_ratio = 1
 separator, cut = separator_dict[task], ';'
 data = json.load(open(data_path, 'r'))
@@ -57,8 +58,8 @@ num_sample = int(len(data)*sample_ratio)
 rand_indices = random.sample(range(len(data)), num_sample)
 data1 = [data[i] for i in rand_indices]
 dataset = Dataset_LLM4SYN(data1, index=None, te_ratio=0.1, separator=separator, cut=cut, arrow=arrow, task=task).dataset 
-run_name = f'{task}_{model_tag}_{ver_tag}'  #TODO put all config part into one place
-model_name = join(hf_usn, run_name)   #TODO any newer model? 
+run_name = f'{task}_{model_tag}_{ver_tag}' 
+model_name = join(hf_usn, run_name) 
 hf_model = gpt_model_dict[model_tag] 
 tk_model = hf_model
 
@@ -101,11 +102,10 @@ tokenized_datasets = dataset.map(tokenize_function, batched=True, remove_columns
 
 #%%
 # load model 
-# load model 
 if load_pretrained:
     model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 else:      
-    model = AutoModelForCausalLM.from_pretrained(hf_model).to(device)   #!
+    model = AutoModelForCausalLM.from_pretrained(hf_model).to(device)  
 model0 = AutoModelForCausalLM.from_pretrained(hf_model).to(device)
 print(model.config) 
 
@@ -154,7 +154,7 @@ epoch_count = 0
 perplexity_scores = []
 for i, ep_list in enumerate(ep_lists):
     for fold, (train_index, val_index) in enumerate(kf.split(dataset['train'])):
-        if fold >= len(ep_list):    #! if the number of epochs is not enough for the number of folds,
+        if fold >= len(ep_list):  
             continue
         print(f"Round {i}, Fold {fold + 1}/{num_folds}")
 
@@ -176,11 +176,11 @@ for i, ep_list in enumerate(ep_lists):
             logging_steps=1,   # how often to log to W&B
             per_device_train_batch_size=per_device_train_batch_size,
             per_device_eval_batch_size=per_device_eval_batch_size,
-            save_total_limit=1, #!
+            save_total_limit=1, 
             # load_best_model_at_end=True
             
         )
-        trainer = Trainer(    #! CustomTrainer instead of Trainer
+        trainer = Trainer(   
             model=model,
             args=training_args,
             train_dataset=train_dataset,
@@ -193,7 +193,7 @@ for i, ep_list in enumerate(ep_lists):
         eval_results = trainer.evaluate()
         print('eval_results: ', eval_results)
         perplexity = math.exp(eval_results['eval_loss'])
-        print(f"Perplexity (Round {i}, Fold {fold + 1}): {perplexity:.2f}") #TODO could e present perplexity in the paper?? 
+        print(f"Perplexity (Round {i}, Fold {fold + 1}): {perplexity:.2f}") 
         # Store the perplexity score for this fold
         perplexity_scores.append(perplexity)
         epoch_count += epoch
@@ -219,6 +219,7 @@ if save_indices:
         for i in rand_indices: f.write(f"{i}\n")
 
 #%%
+#TODO delete this section in the end
 print('test after training')
 idx = 9
 data_source = 'test'

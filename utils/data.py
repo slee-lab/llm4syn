@@ -95,44 +95,6 @@ class Dataset_template(LLMDataset):
         self.data_dict = {"label": [], "text": []}
 
 
-           
-
-# class Dataset_Ceq2Ope_simple(LLMDataset):  #TODO: remove in the end
-#     def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, task=None):
-#         super().__init__(data, index, te_ratio, separator, cut, task)
-
-#     def get_data_list(self):
-#         self.data_list = [
-#             {
-#                 "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
-#                 "opes": self.data[i]['operations'],
-#                 'eq': self.data[i]['reaction_string'].replace('==', '->')
-#             }
-#             for i in self.index
-#             # Add more dictionaries here...
-#         ]
-        
-#     def get_data_dict(self):
-#         self.data_dict = {"label": [], "text": []}
-#         for d in self.data_list:
-#             eq = d['eq']
-#             if self.cut in eq:
-#                 eq = eq.split(self.cut)[0]
-#             prompt = eq
-#             protocol = [d_['type'] for d_ in d['opes']] 
-#             protocol_ = [x.replace('Operation', '') for x in protocol]   #!
-#             protocol = []
-#             for x in protocol_:
-#                 if x in remove_ing_exception.keys():
-#                     protocol.append(x.replace(x, remove_ing_exception[x]))
-#                 else: 
-#                     protocol.append(x)
-#             protocol = [x.replace('ing', '') for x in protocol]   #!
-#             self.data_dict["label"].append(space_separator(prompt+ self.separator, self.separator))  #!
-#             self.data_dict["text"].append(space_separator(prompt+ self.separator +" ".join(protocol), self.separator))
-
-
-
 def label_text(task='lhs2rhs', separator_o=separator_o, lhs=None, rhs=None, tgt=None, eq=None, ope=None, separator='->'):
     if task == 'lhs2rhs':
         label = space_separator(lhs + separator, separator)
@@ -157,7 +119,7 @@ def label_text(task='lhs2rhs', separator_o=separator_o, lhs=None, rhs=None, tgt=
         
 
 
-class Dataset_LLM4SYN(LLMDataset):   # TODO: combine all the dataset class into one (or two)
+class Dataset_LLM4SYN(LLMDataset): 
     def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, arrow=arrow_l2r, task=None):
         super().__init__(data, index, te_ratio, separator, cut, arrow, task)
 
@@ -166,16 +128,17 @@ class Dataset_LLM4SYN(LLMDataset):   # TODO: combine all the dataset class into 
             {
                 "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
                 "opes": self.data[i]['operations'],
-                'eq': self.data[i]['reaction_string'].replace('==', self.arrow).split(self.cut)[0]
+                'eq': self.data[i]['reaction_string'].replace('==', self.arrow).split(self.cut)[0],
+                'mpid': self.data[i]['target']['mp_id'] #if self.data[i]['target']['mp_id'] is not None else 'None'
             }
             for i in self.index
         ]
         
     def get_data_dict(self):
-        self.data_dict = {"label": [], "text": []}
+        self.data_dict = {"label": [], "text": [], "mpid": []}
         for h, d in enumerate(self.data_list):
             protocol_ = [d_['type'] for d_ in d['opes']] 
-            protocol_ = [x.replace('Operation', '') for x in protocol_]   #!
+            protocol_ = [x.replace('Operation', '') for x in protocol_]  
             protocol = []
             for x in protocol_:
                 if x in remove_ing_exception.keys():
@@ -190,6 +153,7 @@ class Dataset_LLM4SYN(LLMDataset):   # TODO: combine all the dataset class into 
             label, text = label_text(**catalog)
             self.data_dict["label"].append(label)
             self.data_dict["text"].append(text)
+            self.data_dict["mpid"].append(d['mpid'])  
 
 
 black_list = ['?', '!', ';', '{', '}', '\\', '@', '#', '$', '%', '^', '&', '_', '~', '`', 'δ', '�', 'ㅋ']
@@ -249,15 +213,13 @@ def one_result(model, tokenizer, dataset, idx, set_length={'type': 'add', 'value
     return {'out_text': out_text, 'gt_text': gt_text, 'label': label}
 
 
-
-
 def preprocess_function(tokenizer, function, examples):
     return tokenizer([function(x) for x in examples["label"]])
 
 
-def input_prcess(data):
-    pass
+# def input_prcess(data):
+#     pass
 
 
-def output_process(data):
-    pass
+# def output_process(data):
+#     pass
