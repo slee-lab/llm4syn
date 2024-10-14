@@ -26,6 +26,14 @@ adjust_space = {'LHS2RHS': '', 'RHS2LHS': '', 'TGT2CEQ': ' ', 'LHSOPE2RHS': '', 
 
 # load the dataframe
 df = pd.read_csv(join(save_dir, df_file))
+# apply .strip() to columns 'label', 'gt_text', 'pr_text', 'gt_eq', 'pr_eq' 
+df['label'] = df['label'].apply(lambda x: x.strip())
+df['gt_text'] = df['gt_text'].apply(lambda x: x.strip())
+df['pr_text'] = df['pr_text'].apply(lambda x: x.strip())
+df['gt_eq'] = df['gt_eq'].apply(lambda x: x.strip())
+df['pr_eq'] = df['pr_eq'].apply(lambda x: x.strip())
+df['pr_text.0'] = df['pr_text.0'].apply(lambda x: x.strip())
+df['pr_eq.0'] = df['pr_eq.0'].apply(lambda x: x.strip())
 # sort the dataframe by accuracy 'ja' and the 'acc' 
 df = df.sort_values(by=['acc'], ascending=False)
 # df = df.sort_values(by=['jac', 'acc'], ascending=False)
@@ -77,12 +85,12 @@ def generate_latex_table(filename, table_caption, table_label, data):
             jac = round(row['jac'], 3)
             tan0 = round(row['acc.0'], 3)
             jac0 = round(row['jac.0'], 3)
-            gt_text = row['gt_text']
-            pr_text = row['pr_text']
-            pr_text0 = row['pr_text.0']
-            gt_eq = row['gt_eq']
-            pr_eq = row['pr_eq']
-            pr_eq0 = row['pr_eq.0']
+            gt_text = row['gt_text'].strip()
+            pr_text = row['pr_text'].strip()
+            pr_text0 = row['pr_text.0'].strip()
+            gt_eq = row['gt_eq'].strip()
+            pr_eq = row['pr_eq'].strip()
+            pr_eq0 = row['pr_eq.0'].strip()
             print('pr_text0:', pr_text0)
             print('pr_eq0:', pr_eq0)
         
@@ -129,3 +137,5 @@ def generate_latex_table(filename, table_caption, table_label, data):
 generate_latex_table(f"./tex/si_tab_{model_name.lower()}_{len_out}.tex", f"Selected examples of {model_name}", f"tab_s_{model_name.lower()}", df.iloc[:len_out])
 
 
+
+# %%

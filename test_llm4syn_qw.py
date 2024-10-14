@@ -8,6 +8,7 @@ import pickle as pkl
 import json
 import random
 import math
+from tqdm import tqdm
 from sklearn.model_selection import KFold 
 from transformers import AutoTokenizer
 from transformers import AutoModelForCausalLM, TrainingArguments, Trainer, set_seed
@@ -18,7 +19,7 @@ from env_config import *
 from utils.data import *
 from utils.model_utils import *
 from utils.metrics import *
-from utils.catalog import *
+from data2.llm4syn.utils.data_config import *
 from utils.plot_data import good_colors
 file_name = os.path.basename(__file__)
 
@@ -127,7 +128,8 @@ for idx in tqdm(range(num_sample), desc="Processing"):
             print(f'[{idx}] out_conf_dict[task]: ', out_conf_dict[task])
             out_dict = one_result(model_, tokenizer, dataset, idx, set_length=out_conf_dict[task], 
                             separator=separator, source=data_source ,device='cuda', **gen_conf) 
-            label, gt_text, pr_text  = out_dict['label'], out_dict['gt_text'], out_dict['out_text']
+            label, gt_text, pr_text  = out_dict['label'].strip(), out_dict['gt_text'].strip(), out_dict['out_text'].strip()
+            # label, gt_text, pr_text  = out_dict['label'], out_dict['gt_text'], out_dict['out_text']
             
             mpid = dataset[data_source][idx]['mpid']
             qw = df_qw.loc[df_qw['mpid'] == mpid, 'qw'].values[0] if mpid in mpids_qw else None
@@ -142,8 +144,8 @@ for idx in tqdm(range(num_sample), desc="Processing"):
                 pr_text = pr_text[:int(len(gt_text)+gt_cut_add)]
             
             ###
-            gt_eq = gt_text[len_label:]
-            pr_eq = pr_text[len_label:]
+            gt_eq = gt_text[len_label:].strip()
+            pr_eq = pr_text[len_label:].strip()
             if len(pr_eq) == 0:
                 pr_eq = 'Error'
                 pr_text = pr_text + ' Error'

@@ -33,3 +33,10 @@ def setup_tokenizer(tk_model, pad_tokenizer):
     if pad_tokenizer:
         tokenizer.pad_token = tokenizer.eos_token
     return tokenizer
+
+def tokenize_dataset(dataset, tokenizer, seedn):
+    def tokenize_function(examples):
+        return tokenizer(examples["text"], padding=True, truncation=True, return_tensors="pt")
+    tokenized_datasets = dataset.map(tokenize_function, batched=True, remove_columns=dataset["train"].column_names)
+    return tokenized_datasets["train"].shuffle(seed=seedn), tokenized_datasets["test"].shuffle(seed=seedn)
+

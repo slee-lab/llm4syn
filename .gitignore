@@ -17,6 +17,17 @@ tex/
 test_lhs2rhs.py
 test_llama3.py
 data_check.py
+data_statistics.py
 
 test_llm4syn_jaccard.py
 test_tgtope2ceq.py
+
+test_llm4syn_qw.py
+test_llm4syn_eval.py
+benchmark_loss.py
+
+find_qw.py
+
+out_table.py
+plot_accuracy_qw.py
+plot_accracy.py

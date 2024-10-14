@@ -1,56 +1,29 @@
 #%%
 import re
 import numpy as np
-import csv
 from scipy.optimize import linear_sum_assignment
-import re
-
-chemical_symbols = [
-
-    # 1
-    'H', 'He',
-    # 2
-    'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
-    # 3
-    'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar',
-    # 4
-    'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn',
-    'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr',
-    # 5
-    'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd',
-    'In', 'Sn', 'Sb', 'Te', 'I', 'Xe',
-    # 6
-    'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy',
-    'Ho', 'Er', 'Tm', 'Yb', 'Lu',
-    'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi',
-    'Po', 'At', 'Rn',
-    # 7
-    'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk',
-    'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr',
-    'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc',
-    'Lv', 'Ts', 'Og']
 
 
-def parse_formula(formula):
+# def parse_formula(formula):
+def element_vector(formula):
     # Adjusted regex pattern to match element symbols followed by optional integers or decimal numbers
     elements = re.findall('([A-Z][a-z]*)(\d*\.?\d+)?', formula)
-    
     return {element: float(count) if count else 1 for element, count in elements}
 
-def element_vector(formula):
-    """
-    Convert a chemical formula into a vector (dictionary) of element counts.
-    """
-    element_counts = parse_formula(formula)  # Assuming parse_formula is defined as before
-    return element_counts
+# def element_vector(formula):
+#     """
+#     Convert a chemical formula into a vector (dictionary) of element counts.
+#     """
+#     element_counts = parse_formula(formula)  # Assuming parse_formula is defined as before
+#     return element_counts
 
-def tanimoto_similarity_elemental(comp1, comp2):
+def tanimoto_similarity_elemental(formula1, formula2):
     """
     Calculate the Tanimoto similarity between two chemical compositions based on element counts.
     """
-    # print('(comp1, comp2)', (comp1, comp2))
-    vec1 = element_vector(comp1)
-    vec2 = element_vector(comp2)
+    # print('(formula1, formula2)', (formula1, formula2))
+    vec1 = element_vector(formula1)
+    vec2 = element_vector(formula2)
     # print('(vec1, vec2) ', (vec1, vec2))
     
     common_elements = set(vec1.keys()) & set(vec2.keys())
@@ -70,14 +43,14 @@ def tanimoto_similarity_elemental(comp1, comp2):
     
     return similarity
 
-def split_half(equation):
+def split_half(equation):   #!TODO: check thhe code
     # Calculate the midpoint of the string
     midpoint = len(equation) // 2
     # Find the nearest space to the midpoint
     # Search for the nearest space character to the left of the midpoint
-    left_index = equation.rfind(' ', 0, midpoint)
+    left_index = equation.rfind(' ', 0, midpoint)   #!
     # Search for the nearest space character to the right of the midpoint
-    right_index = equation.find(' ', midpoint)
+    right_index = equation.find(' ', midpoint)  #!
     # Determine which space is closer to the midpoint
     if midpoint - left_index < right_index - midpoint:
         split_index = left_index
@@ -99,44 +72,44 @@ def split_equation(equation, split):
     products = [product.strip() for product in products_part.split("+")]
     return reactants, products
 
-def compare_components(components1, components2):
+def compare_formula_lists(formula_list1, formula_list2):
     # Compute similarity matrix
     similarity_matrix = [
-        [tanimoto_similarity_elemental(comp1, comp2) for comp2 in components2] 
-        for comp1 in components1
+        [tanimoto_similarity_elemental(formula1, formula2) for formula2 in formula_list2] 
+        for formula1 in formula_list1
     ]
     
     # Hungarian algorithm to find the best pairing
     row_ind, col_ind = linear_sum_assignment(cost_matrix=-1 * np.array(similarity_matrix))
     
     # Calculate overall similarity
-    overall_similarity = sum(similarity_matrix[row][col] for row, col in zip(row_ind, col_ind)) / max(len(components1), len(components2))
+    similarity = sum(similarity_matrix[row][col] for row, col in zip(row_ind, col_ind)) / max(len(formula_list1), len(formula_list2))
     
-    return overall_similarity
+    return similarity
 
-def equation_similarity_(equation1, equation2, whole_equation=True, split='->'):
+def equation_similarity_partial(equation1, equation2, whole_equation=True, split='->'):
     if whole_equation:
         reactants1, products1 = split_equation(equation1, split)
         reactants2, products2 = split_equation(equation2, split)
      
-        similarity_reactants = compare_components(reactants1, reactants2)
-        similarity_products = compare_components(products1, products2)
+        similarity_reactants = compare_formula_lists(reactants1, reactants2)
+        similarity_products = compare_formula_lists(products1, products2)
         
         overall_similarity = (similarity_reactants + similarity_products) / 2
     else:
-        components1 = equation1.split("+")
-        components2 = equation2.split("+")
+        formula_list1 = equation1.split("+")
+        formula_list2 = equation2.split("+")
 
-        # print('components1, components2: ', components1, components2)
-        overall_similarity = compare_components(components1, components2)
+        # print('formula_list1, formula_list2: ', formula_list1, formula_list2)
+        overall_similarity = compare_formula_lists(formula_list1, formula_list2)
         similarity_reactants = similarity_products = overall_similarity  # In this case, they are the same
     
     return similarity_reactants, similarity_products, overall_similarity
         
 def equation_similarity(equation1, equation2, whole_equation=True, split='->'):
     # Calculate similarity in both directions
-    sim_r1, sim_p1, sim1 = equation_similarity_(equation1, equation2, whole_equation, split)
-    sim_r2, sim_p2, sim2 = equation_similarity_(equation2, equation1, whole_equation, split)
+    sim_r1, sim_p1, sim1 = equation_similarity_partial(equation1, equation2, whole_equation, split)
+    sim_r2, sim_p2, sim2 = equation_similarity_partial(equation2, equation1, whole_equation, split)
     sim_r, sim_p, sim = (sim_r1+sim_r2)/2, (sim_p1+sim_p2)/2, (sim1+sim2)/2
     return sim_r, sim_p, sim
 
@@ -146,31 +119,43 @@ def jaccard_similarity(str1, str2):
     set2 = set(str2.split())
     return len(set1.intersection(set2)) / len(set1.union(set2))
 
+def jaccard_similarity_wo_sym(str1, str2, arrow='->'):
+    set1 = set(str1.split())
+    set2 = set(str2.split())
+    ####
+    # remove '+' from the set
+    set1.discard('+')
+    set1.discard(arrow)
+    set2.discard('+')
+    set2.discard(arrow)
+    ####
+    return len(set1.intersection(set2)) / len(set1.union(set2))
 
-def find_atomic_species(formula):
-    # Regular expression pattern for element symbols: one uppercase letter followed by an optional lowercase letter
-    pattern = r'[A-Z][a-z]?'
+
+# def find_atomic_species(formula):   #TODO: could we combine this with the element_vector function?. Also check if ''fformula' is correct. 
+#     # Regular expression pattern for element symbols: one uppercase letter followed by an optional lowercase letter
+#     pattern = r'[A-Z][a-z]?'
     
-    # Find all occurrences of the pattern in the formula string
-    elements = re.findall(pattern, formula)
+#     # Find all occurrences of the pattern in the formula string
+#     elements = re.findall(pattern, formula)
     
-    # Remove duplicates by converting the list to a set, then convert back to a list if needed
-    unique_elements = list(set(elements))
-    # print('unieuq_elements: ', unique_elements)
-    chem_list = []
-    for el in unique_elements:
-        if el in chemical_symbols:
-            chem_list.append(el)
-        else: 
-            if el[0] in chemical_symbols:
-                chem_list.append(el[0])
+#     # Remove duplicates by converting the list to a set, then convert back to a list if needed
+#     unique_elements = list(set(elements))
+#     # print('unieuq_elements: ', unique_elements)
+#     chem_list = []
+#     for el in unique_elements:
+#         if el in chemical_symbols:
+#             chem_list.append(el)
+#         else: 
+#             if el[0] in chemical_symbols:
+#                 chem_list.append(el[0])
  
-    return list(set(chem_list))
+#     return list(set(chem_list))
 
-def save_dict_as_csv(dictionary, filename):
-    with open(filename, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        # Write the header row, if needed
-        # writer.writerow(['Element', 'Value'])
-        for key, value in dictionary.items():
-            writer.writerow([key, value])
+# def save_dict_as_csv(dictionary, filename):
+#     with open(filename, 'w', newline='') as csvfile:
+#         writer = csv.writer(csvfile)
+#         # Write the header row, if needed
+#         # writer.writerow(['Element', 'Value'])
+#         for key, value in dictionary.items():
+#             writer.writerow([key, value])
