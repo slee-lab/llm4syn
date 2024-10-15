@@ -1,12 +1,12 @@
 
 separator_dict = {'lhs2rhs': '->', 'rhs2lhs': '<-', 'tgt2ceq': '||', 'lhsope2rhs': '->', 'rhsope2lhs': '<-', 'tgtope2ceq': '||'}
 
-out_conf_dict = {'lhs2rhs': {'type': 'mul', 'value': 4},   # 2.1
-                 'rhs2lhs': {'type': 'mul', 'value': 6},   # 2.1
-                 'tgt2ceq': {'type': 'mul', 'value': 11},   # 4.0
-                 'lhsope2rhs': {'type': 'mul', 'value': 4},    # 2.1
-                 'rhsope2lhs': {'type': 'mul', 'value': 6},    # 2.1
-                 'tgtope2ceq': {'type': 'mul', 'value': 11}}    # 4.0
+out_conf_dict = {'lhs2rhs': {'type': 'mul', 'value': 4},   
+                 'rhs2lhs': {'type': 'mul', 'value': 6},   
+                 'tgt2ceq': {'type': 'mul', 'value': 11},   
+                 'lhsope2rhs': {'type': 'mul', 'value': 4},    
+                 'rhsope2lhs': {'type': 'mul', 'value': 6},    
+                 'tgtope2ceq': {'type': 'mul', 'value': 11}}    
 
 gpt_model_dict = {'dgpt2': "distilbert/distilgpt2", 
                   'gpt2': "gpt2"}    

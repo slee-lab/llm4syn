@@ -9,34 +9,6 @@ eqsplit = '=='
 remove_ing_exception = {'Shaping': 'Shape'}
 opes_list = 'SolutionMix', 'Shape', 'Dry', 'Mix', 'Heat', 'LiquidGrind', 'Quench'
 
-# arrow_l2r = '->'
-# separator_out = ': '
-
-# def space_separator(target_string: str, separator: str) -> str:
-
-#     """
-#     Adjust the spacing around a separator in a target string.
-#     """
-#     # Find the index of the separator in the target string
-#     separator = str(separator).strip()
-#     index = target_string.find(separator)
-    
-#     while index != -1:  # While the separator is found  #TODO: check if this is correct. 
-#         # Check if there is no space before the separator
-#         if index > 0 and target_string[index - 1] != ' ':
-#             target_string = target_string[:index] + ' ' + target_string[index:]
-#             index += 1  # Adjust index to account for the inserted space
-        
-#         # Check if there is no space after the separator
-#         index += len(separator)
-#         if index < len(target_string) and target_string[index] != ' ':
-#             target_string = target_string[:index] + ' ' + target_string[index:]
-        
-#         # Find the next occurrence of the separator
-#         index = target_string.find(separator, index)
-    
-#     return target_string
-
 
 def format_separator(text: str, separator: str) -> str:
     # Step 0: Remove extra spaces
@@ -44,7 +16,6 @@ def format_separator(text: str, separator: str) -> str:
         text = text.replace('  ', ' ')
     # Step 1: Normalize the spaces around the separator
     # Use the str.replace to ensure one space on both sides of the separator
-
     formatted_text = text.replace(f' {separator}', separator).replace(f'{separator} ', separator)
     formatted_text = formatted_text.replace(separator, f' {separator} ')  # Add spaces around the separator
     
@@ -75,6 +46,7 @@ class LLMDataset:
             self.cut = cut
         self.arrow = arrow
         self.task = task
+        self.data_dict = None
         self.get_data_list()
         self.get_data_dict()
         self.get_dataset()
@@ -118,10 +90,8 @@ def label_text(task='lhs2rhs', separator_out=separator_out, lhs=None, rhs=None, 
     elif task == 'tgtope2ceq':
         label = format_separator(tgt + separator_out + ope + separator, separator)
         text = format_separator(tgt + separator_out + ope + separator + eq, separator)
-    
     return label, text
         
-
 
 class Dataset_LLM4SYN(LLMDataset): 
     def __init__(self, data, index=None, te_ratio=0.1, separator='||', cut=None, arrow=arrow_l2r, task=None):
@@ -133,7 +103,7 @@ class Dataset_LLM4SYN(LLMDataset):
                 "target": ", ".join(self.data[i]['targets_string']) if isinstance(self.data[i]['targets_string'], list) else self.data[i]['targets_string'],
                 "opes": self.data[i]['operations'],
                 'eq': self.data[i]['reaction_string'].replace('==', self.arrow).split(self.cut)[0],
-                'mpid': self.data[i]['target']['mp_id'] #if self.data[i]['target']['mp_id'] is not None else 'None'
+                'mpid': self.data[i]['target']['mp_id'] 
             }
             for i in self.index
         ]
@@ -152,7 +122,6 @@ class Dataset_LLM4SYN(LLMDataset):
             tgt = d['target']
             eq = d['eq']
             lhs,rhs = eq.split(self.arrow)
-            # catalog = {'task': self.task, 'separator': self.separator, 'eq': eq, 'lhs': lhs, 'rhs': rhs, 'tgt': tgt, 'ope': '['+" ".join(protocol)+']'}
             catalog = {'task': self.task, 'separator': self.separator, 'eq': eq, 'lhs': lhs, 'rhs': rhs, 'tgt': tgt, 'ope': " ".join(protocol)}
             label, text = label_text(**catalog)
             self.data_dict["label"].append(label)
@@ -171,67 +140,3 @@ def load_and_sample_data(data_path, task, separator, te_ratio=0.1, cut=';', arro
             for i in rand_indices: f.write(f"{i}\n")
     return Dataset_LLM4SYN(sampled_data, index=None, te_ratio=te_ratio, separator=separator, cut=cut, arrow=arrow, task=task).dataset
 
-
-# black_list = ['?', '!', ';', '{', '}', '\\', '@', '#', '$', '%', '^', '&', '_', '~', '`', 'δ', '�', 'ㅋ']
-
-# def one_result(model, tokenizer, dataset, idx, set_length={'type': 'add', 'value': 50}, 
-#                   separator=None, source='test',device='cuda', **kwargs):
-#     """_summary_
-
-#     Args:
-#         model (_type_): _description_
-#         dataset (_type_): _description_
-#         idx (_type_): _description_
-#         tokenizer (_type_): _description_
-#         set_length (dict, optional): _description_. Defaults to {'type': 'add', 'value': 50}. Otherwise {'type': 'mul', 'value': 1.2}.
-#         separator (_type_, optional): _description_. Defaults to None.
-#         remove_header (bool, optional): _description_. Defaults to True.
-#         cut (_type_, optional): _description_. Defaults to None. Set ';' if you want cut off the output after ';'. 
-#         source (str, optional): _description_. Defaults to 'test'.
-#         device (str, optional): _description_. Defaults to 'cuda'.
-
-#     Returns:
-#         _type_: _description_
-#     """
-#     # get the text string from the dataset
-#     label = dataset[source][idx]['label']   # prompt
-#     text = dataset[source][idx]['text'] # true output text
-#     # remove separator in case it still exists in the end of the label
-#     label_wo_sep = label.replace(separator, '')
-#     label_wo_sep = label_wo_sep.split(separator_out)[0]
-#     origin = label_wo_sep.split(separator_out)[0].split(',')   #split by ',' and take the first part. This can limit the length of the input if there are multiple reactants.
-#     # sort the reactants by length, and take the median length of the reactants
-#     origin.sort(key=len)
-#     origin = origin[len(origin)//2]
-    
-#     tok_origin = tokenizer(origin, padding=True, truncation=True, return_tensors="pt")  #TODO: do we really need orign? Is this only for deciding the lengths of the input in case of multiple reactants?
-#     tok_origin = {key: tensor.to(device) for key, tensor in tok_origin.items()}
-#     tok_origin_len = tok_origin['input_ids'].shape[-1]
-    
-#     tok_label = tokenizer(label, padding=True, truncation=True, return_tensors="pt")
-#     tok_label = {key: tensor.to(device) for key, tensor in tok_label.items()}
-#     tok_label_len = tok_label['input_ids'].shape[-1]
-    
-#     if set_length['type']=='add':
-#         max_length = tok_label_len + int(set_length['value'])
-#     else: 
-#         max_length = tok_label_len + int(tok_origin_len*float(set_length['value']))   #TODO: multiply the length of input excluding the OPE part (split by ':' and take the first part)
-    
-#     print('tok_origin_len, tok_label_len, max_length: ', tok_origin_len, tok_label_len, max_length)
-#     generated_ids = model.generate(**tok_label, max_length=max_length, **kwargs)
-#     # print('text: ', text)
-#     tok_text = tokenizer(text)
-#     gt_text = tokenizer.decode(tok_text["input_ids"])
-#     out_text = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-    
-#     # replace unfamiliar characters with ''
-#     for bk in black_list:
-#         out_text = out_text.replace(bk, '')
-
-#     # print('gtruth: ', gt_answer) 
-#     # print('answer: ', output)
-#     return {'out_text': out_text, 'gt_text': gt_text, 'label': label}
-
-
-# def preprocess_function(tokenizer, function, examples):
-#     return tokenizer([function(x) for x in examples["label"]])

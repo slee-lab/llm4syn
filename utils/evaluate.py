@@ -69,7 +69,7 @@ def one_result(model, tokenizer, dataset, idx, set_length={'type': 'add', 'value
     origin.sort(key=len)
     origin = origin[len(origin)//2]
     
-    tok_origin = tokenizer(origin, padding=True, truncation=True, return_tensors="pt")  #TODO: do we really need orign? Is this only for deciding the lengths of the input in case of multiple reactants?
+    tok_origin = tokenizer(origin, padding=True, truncation=True, return_tensors="pt")  
     tok_origin = {key: tensor.to(device) for key, tensor in tok_origin.items()}
     tok_origin_len = tok_origin['input_ids'].shape[-1]
     
@@ -80,7 +80,7 @@ def one_result(model, tokenizer, dataset, idx, set_length={'type': 'add', 'value
     if set_length['type']=='add':
         max_length = tok_label_len + int(set_length['value'])
     else: 
-        max_length = tok_label_len + int(tok_origin_len*float(set_length['value']))   #TODO: multiply the length of input excluding the OPE part (split by ':' and take the first part)
+        max_length = tok_label_len + int(tok_origin_len*float(set_length['value']))   
     
     print('tok_origin_len, tok_label_len, max_length: ', tok_origin_len, tok_label_len, max_length)
     generated_ids = model.generate(**tok_label, max_length=max_length, **kwargs)
@@ -93,8 +93,6 @@ def one_result(model, tokenizer, dataset, idx, set_length={'type': 'add', 'value
     for bk in black_list:
         p_text = p_text.replace(bk, '')
 
-    # print('gtruth: ', gt_answer) 
-    # print('answer: ', output)
     return {'p_text': p_text, 't_text': t_text, 'label': label}
 
 
@@ -113,12 +111,10 @@ def evaluate_models(model_dict, dataset, tokenizer, num_sample, header,
     # random indices without replacement
     idx_list = sorted(random.sample(range(len(dataset[data_source])), num_sample))
     for h, idx in tqdm(enumerate(idx_list), desc="Processing"):
-    # for idx in tqdm(idx_list, desc="Processing"):
         row_dict = {}
         for model_key, model in model_dict.items():
             try:
                 mpid = dataset[data_source][idx]['mpid']
-                # out_dict = one_result(model, tokenizer, dataset, idx, set_length=out_conf_dict[task], separator=separator_dict[task], source=data_source, device=device)
                 out_dict = one_result(model, tokenizer, dataset, idx, set_length=set_length, 
                             separator=separator, source=data_source ,device=device, **gen_conf) 
                 label, t_text, p_text = out_dict['label'].strip(), out_dict['t_text'].strip(), out_dict['p_text'].strip()
@@ -154,7 +150,5 @@ def evaluate_models(model_dict, dataset, tokenizer, num_sample, header,
         if h%20==0 or h==len(idx_list)-1:
             df.to_csv(join(save_dir, f'{header}_{data_source}_n{num_sample}.csv'))
             print(f'Saved {header}_{data_source}_n{num_sample}.csv at {h}th iteration')
-        
-    
-    # sort df by idx
+
     return df

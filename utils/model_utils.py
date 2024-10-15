@@ -1,7 +1,4 @@
-import numpy as np 
-import torch
-from transformers import Trainer, AutoModelForCausalLM, TrainingArguments, AutoTokenizer
-import torch.nn as nn
+from transformers import AutoTokenizer
 
 
 allowed_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()[]<>+-*=/., "
