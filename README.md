@@ -40,7 +40,7 @@ These models are fine-tuned using a text-mined synthesis database, improving pre
 
 ## Download Dataset
 
-Download the dataset from the following sources and place the `.json` files in `./data/`:
+Download the dataset from the following sources and place the `solid-state_dataset_2019-06-27_upd.json` file in `./data/`:
 
 - [Nature Scientific Data](https://www.nature.com/articles/s41597-019-0224-1)
 
