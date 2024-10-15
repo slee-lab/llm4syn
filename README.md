@@ -1,6 +1,6 @@
-# LLM4Mat
+# LLM4SYN
 
-**LLM4Mat** is a framework that leverages large language models (LLMs) to predict chemical synthesis pathways for inorganic materials. It includes three core models: 
+**LLM4SYN** is a framework that leverages large language models (LLMs) to predict chemical synthesis pathways for inorganic materials. It includes three core models: 
 1. **LHS2RHS**: Predicts products from reactants.
 2. **RHS2LHS**: Predicts reactants from products.
 3. **TGT2CEQ**: Generates the full chemical equation given a target compound.
