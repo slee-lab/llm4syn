@@ -69,6 +69,7 @@ wandb==0.16.0
 accelerate==0.3.0   
 huggingface_hub==0.16.4   
 datasets==2.14.5   
+bokeh==3.3.4   
 # Other basic libraries like numpy, matplotlib, etc.
 ```
 
