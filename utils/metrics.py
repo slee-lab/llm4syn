@@ -83,7 +83,7 @@ def compare_formula_lists(formula_list1, formula_list2):
     row_ind, col_ind = linear_sum_assignment(cost_matrix=-1 * np.array(similarity_matrix))
     
     # Calculate overall similarity
-    similarity = sum(similarity_matrix[row][col] for row, col in zip(row_ind, col_ind)) / max(len(formula_list1), len(formula_list2))
+    similarity = sum(similarity_matrix[row][col] for row, col in zip(row_ind, col_ind)) / len(formula_list1)#max(len(formula_list1), len(formula_list2))
     
     return similarity
 

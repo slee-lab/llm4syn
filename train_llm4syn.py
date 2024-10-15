@@ -138,7 +138,7 @@ for i, ep_list in enumerate(ep_lists):
         if i==0 and fold==0:
             tokenizer.push_to_hub(model_name)   # save tokenizer to HF
             wandb.config.update(conf_dict) 
-        wandb.log({'perplexity': perplexity, 'epoch_count': epoch_count})   # TODO: save valid loss, train loss, etc.
+        wandb.log({'perplexity': perplexity, 'epoch_count': epoch_count})  
     model.push_to_hub(model_name)
 
 # Calculate and print the average perplexity score across all folds

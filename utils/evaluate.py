@@ -1,3 +1,4 @@
+from os.path import join
 import re
 import csv
 import pandas as pd
@@ -5,6 +6,7 @@ import random
 from tqdm import tqdm
 from utils.utilities import chemical_symbols
 from utils.data_config import separator_out
+from env_config import save_dir
 
 black_list = ['?', '!', ';', '{', '}', '\\', '@', '#', '$', '%', '^', '&', '_', '~', '`', 'δ', '�', 'ㅋ']
 
@@ -150,7 +152,7 @@ def evaluate_models(model_dict, dataset, tokenizer, num_sample, header,
         
         
         if h%20==0 or h==len(idx_list)-1:
-            df.to_csv(f'./save/{header}_{data_source}_n{num_sample}.csv')
+            df.to_csv(join(save_dir, f'{header}_{data_source}_n{num_sample}.csv'))
             print(f'Saved {header}_{data_source}_n{num_sample}.csv at {h}th iteration')
         
     

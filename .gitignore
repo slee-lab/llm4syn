@@ -31,3 +31,4 @@ find_qw.py
 out_table.py
 plot_accuracy_qw.py
 plot_accracy.py
+eval_llm4syn.py

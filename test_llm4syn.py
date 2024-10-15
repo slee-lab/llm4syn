@@ -19,7 +19,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 login(hf_api_key_w, add_to_git_credential=True) 
 
 # Hyperparameters
-task = 'tgtope2ceq'  
+task = 'rhsope2lhs'  
 model_tag = 'dgpt2'
 ver_tag = 'v1.2.1'
 file_tag = '-1.1'
