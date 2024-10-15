@@ -130,8 +130,8 @@ eval_llm4syn.ipynb
 If you find this code or dataset useful, please cite the following paper:
 
 ```bibtex
-@article{okabe2024virtual,
-  title={Virtual node graph neural network for full phonon prediction},
+@article{okabe2024llm,
+  title={Large-Language-Model-Guided Prediction of Synthesis Pathways for Inorganic Materials},
   author={Okabe, Ryotaro and others},
   journal={XXXX},
   pages={XXX},
