@@ -28,8 +28,8 @@ os.environ["WANDB_PROJECT"] = wandb_project
 # Hyperparameters
 # general
 task = 'tgt2ceq' # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
-model_tag = 'dgpt2'
-ver_tag = 'v1.4.1'
+model_tag = 'dgpt2' # pre-trained model tag
+ver_tag = 'v1.X'  # version of the model
 arrow = arrow_l2r 
 
 # training

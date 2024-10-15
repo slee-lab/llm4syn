@@ -19,16 +19,16 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 login(hf_api_key_w, add_to_git_credential=True) 
 
 # Hyperparameters
-task = 'rhsope2lhs'  
-model_tag = 'dgpt2'
-ver_tag = 'v1.2.1'
-file_tag = '-1.1'
+task = 'rhsope2lhs'  # choose one from ['lhs2rhs', 'rhs2lhs, 'lhsope2rhs', 'rhsope2lhs', 'tgt2ceq', 'tgtope2ceq']
+model_tag = 'dgpt2' # pre-trained model tag
+ver_tag = 'v1.2.1' # version of the model (make sure it is the same as the model you want to evaluate)
+file_tag = '-1.1'   # file tag for saving the results. Leave as "" if you don't want to save the results
 arrow = arrow_l2r 
 separator, cut = separator_dict[task], ';'
 run_name = f'{task}_{model_tag}_{ver_tag}'
 model_name = join(hf_load_name, run_name)  
 save_header = f'{run_name}{file_tag}' 
-tk_model = model_name  # tokenizer model
+tk_model = model_name  
 pad_tokenizer = True
 
 # Load and sample dataset
