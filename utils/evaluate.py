@@ -11,7 +11,7 @@ from env_config import save_dir
 black_list = ['?', '!', ';', '{', '}', '\\', '@', '#', '$', '%', '^', '&', '_', '~', '`', 'δ', '�', 'ㅋ']
 
 
-def find_atomic_species(formula):   #TODO: could we combine this with the element_vector function?. Also check if ''fformula' is correct. 
+def find_atomic_species(formula): 
     # Regular expression pattern for element symbols: one uppercase letter followed by an optional lowercase letter
     pattern = r'[A-Z][a-z]?'
     
