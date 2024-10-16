@@ -33,3 +33,7 @@ plot_accuracy_qw.py
 plot_accracy.py
 plot_accuracy_original.py
 eval_llm4syn.py
+
+eval_llm4syn_ope.ipynb
+eval_opes.py
+plot_accuracy_ope.py

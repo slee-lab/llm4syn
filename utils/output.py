@@ -7,6 +7,10 @@ adjust_l2r, adjust_r2l, adjust_t2c = len(r" $\rightarrow$ ") - len(r"->"), len(r
 adjust_len = {'LHS2RHS': -1, 'RHS2LHS': -1, 'TGT2CEQ': 0, 'LHSOPE2RHS': -1, 'RHSOPE2LHS': -1, 'TGTOPE2CEQ': 0}
 adjust_space = {'LHS2RHS': '', 'RHS2LHS': '', 'TGT2CEQ': ' ', 'LHSOPE2RHS': '', 'RHSOPE2LHS': '', 'TGTOPE2CEQ': ' '}
 
+def rm_space(text):
+    while '  ' in text:
+        text = text.replace('  ', ' ')
+
 def generate_latex_table(filename, task, pred_color, data):
     replace_dict = {
         '->': r'$\rightarrow$', '<-': r'$\leftarrow$', '=>': r'$\Rightarrow$', '<=': r'$\Leftarrow$', 
@@ -92,4 +96,3 @@ def generate_latex_table(filename, task, pred_color, data):
         f.write(r"\end{longtable}" + '\n')
     
     
-
