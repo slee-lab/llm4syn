@@ -1,4 +1,4 @@
-# LLM4SYN
+# Large Language Model-Guided Prediction Toward Quantum Materials Synthesis (LLM4SYN)
 
 **LLM4SYN** is a framework that leverages large language models (LLMs) to predict chemical synthesis pathways for inorganic materials. It includes three core models: 
 1. **LHS2RHS**: Predicts products from reactants.
@@ -131,9 +131,9 @@ eval_llm4syn.ipynb
 If you find this code or dataset useful, please cite the following paper:
 
 ```bibtex
-@article{okabe2024llm,
-  title={Large-Language-Model-Guided Prediction of Synthesis Pathways for Inorganic Materials},
-  author={Okabe, Ryotaro and others},
+@article{okabe2024large,
+  title={Large Language Model-Guided Prediction Toward Quantum Materials Synthesis},
+  author={Okabe, Ryotaro et al},
   journal={XXXX},
   pages={XXX},
   year={2024},
