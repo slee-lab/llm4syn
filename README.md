@@ -11,6 +11,10 @@ These models are fine-tuned using a text-mined synthesis database, improving pre
   <img src="assets/fig_m_process.png" width="500">
 </p>
 
+<p align="center">
+  <img src="assets/fig_m_gts.png" width="500">
+</p>
+
 ---
 
 ## Table of Contents
