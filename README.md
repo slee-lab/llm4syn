@@ -133,7 +133,7 @@ If you find this code or dataset useful, please cite the following paper:
 ```bibtex
 @article{okabe2024large,
   title={Large Language Model-Guided Prediction Toward Quantum Materials Synthesis},
-  author={Ryotaro Okabe, Zack West, Abhijatmedhi Chotrattanapituk, Mouyang Cheng, Denisse C\'ordova Carrizales, Weiwei Xie, Robert J. Cava and Mingda Li},
+  author={Okabe, Ryotaro and West, Zack and Chotrattanapituk, Abhijatmedhi and Cheng, Mouyang and Carrizales, Denisse C{\'o}rdova and Xie, Weiwei and Cava, Robert J and Li, Mingda},
   journal={arXiv preprint arXiv:2410.20976},
   year={2024}
 }
