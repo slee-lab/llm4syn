@@ -5,7 +5,7 @@
 2. **RHS2LHS**: Predicts reactants from products.
 3. **TGT2CEQ**: Generates the full chemical equation given a target compound.
 
-These models are fine-tuned using a text-mined synthesis database, improving prediction accuracy from under 40% to around 90%. The framework also introduces a generalized Tanimoto similarity for accurate evaluation of chemical equations.
+These models are fine-tuned using a text-mined synthesis database, improving prediction accuracy from under 40% to around 90%. The framework also introduces a generalized Tanimoto similarity (GTS) for accurate evaluation of chemical equations.
 
 <p align="center">
   <img src="assets/fig_m_process.png" width="500">
